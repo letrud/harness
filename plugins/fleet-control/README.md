@@ -29,7 +29,7 @@ Two files describe one:
 
 The standard is declared once, in the intent. The audit enforces it and the conformance view draws it, so a CI gate and the published page can never disagree.
 
-## Four skills
+## Five skills
 
 | Skill            | What it does                                                                              |
 | ---------------- | ----------------------------------------------------------------------------------------- |
@@ -37,6 +37,7 @@ The standard is declared once, in the intent. The audit enforces it and the conf
 | `fleet-scaffold` | Stands up a fleet, onboards an instance with honest day-one values, adds slots, dimensions. |
 | `fleet-audit`    | Scores instances against the declared standard; ranked gaps, or a non-zero exit for CI.     |
 | `fleet-surface`  | Renders and publishes the control room, validating data against the intent first.           |
+| `product-intent` | Authors a specification an implementation is written from - what it must say for an agent to act on it correctly. |
 
 ## Four primitives
 

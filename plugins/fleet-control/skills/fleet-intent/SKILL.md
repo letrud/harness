@@ -7,7 +7,7 @@ description: Capture the intent of a fleet - any set of things held against a st
 
 A **fleet** is a set of comparable things held against a standard: repos under a delivery standard, data products under a contract, suppliers under an assurance policy, models under a governance regime, stores under an operating standard. If the things are comparable and something says what "good" means for them, the pattern fits.
 
-The intent spec is the deliverable. It declares what the fleet is, what dimensions it is judged on, what states those take, and when something needs attention. A renderer draws it; nothing needs to be coded per domain. Full field reference: `references/intent.schema.json`. Two worked, working examples in `references/examples/` - one software delivery, one supplier assurance - deliberately from different worlds to show what stays constant.
+The intent spec is the deliverable. It declares what the fleet is, what dimensions it is judged on, what states those take, and when something needs attention. A renderer draws it; nothing needs to be coded per domain. Full field reference: `references/intent.schema.json`. Three worked, working examples in `references/examples/` - software delivery, supplier assurance, value streams - deliberately from different worlds to show what stays constant.
 
 ## Elicit in this order
 
@@ -55,6 +55,20 @@ Severity rules and filters are structured, not expressions - safe to author, saf
 ```
 
 Operators: `eq ne gt gte lt lte in truthy`. Combinators: `all any not`. Collection tests: `anyOf` / `everyOf` over an object's values. Built-in flags: `drifted`, `stale`. Dotted paths address nested fields.
+
+## Make it enforceable, not descriptive
+
+An intent is read by agents as well as people - the harness dispatches one when the intent changes - and every gap in it becomes a guess downstream. Running two fleets and a product repo from intents taught what has to be stated, not implied:
+
+- **Every field is a contract.** The moment the intent names a field, every instance must carry it and something must supply it. Declare where each comes from in `collector/sources.yml` - a real adapter (`live`), a human by design (`owned`), or nobody yet (`todo`, with a one-line note). `collect.py --check` fails when the intent requires a field nothing declares; that failure, not a conformance gap, is what dispatches an agent. **Never invent a plausible adapter** - a declared gap is honest, a fabricated source is worse than none.
+- **Two questions, two consequences.** Conformance - "does this unit meet the standard" - is advisory: raising a standard is *supposed* to produce gaps, and they are for humans to decide about. The contract - "does the data carry what the intent requires" - is mechanical and breaks the build. Say which is which in the intent; an agent given a gap without its kind will fix the wrong thing.
+- **Derived data has one writer.** Data a collector fills is refreshed by CI on the default branch, on a schedule. Nobody hand-edits a `live` field, and a conflict in a derived file is resolved by regenerating it, never by merging. Say so, or the first human push after the collector runs is a conflict.
+- **Declare limitations, not only requirements.** A source that cannot supply a value yet, an environment that never exercises a state - give them a place (`todo`, `absent`, a note) so an honest zero is not mistaken for a broken adapter. `absent` is never `ok`; nor is `null` ever a guess.
+- **Point at the thing.** A state is more useful with the URL of what put it there. `sequence` takes an optional `links` field of step → URL; a running build opens the run. Declare it in the intent, fill it in the data.
+- **Silence is a decision surface.** Nothing outside the intent reaches the agent - not a commit message, not a chat. Where the intent is silent it decides and records the decision in the pull request, never in the intent. If you care about a choice, it is one line in the intent.
+- **Specific knowledge goes in the data, not in prompts.** What an adapter learned about its system - a quirk, a mapping, a workflow-name-to-stage convention - lives as a declared field on the instance (`pipeline`, `envMap`), where the next implementer inherits it.
+
+The `product-intent` skill covers the same ground for a specification that source code is written from.
 
 ## Data is separate
 

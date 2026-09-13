@@ -95,7 +95,7 @@ The job token opens the pull requests, so each calling repository must allow Act
 
 ## The plugin
 
-`plugins/fleet-control` is a Claude Code plugin with four skills — `fleet-intent`, `fleet-scaffold`, `fleet-audit`, `fleet-surface` — the intent schema, the renderer and three worked examples from different domains. CI installs it from this repo as a marketplace; a person installs it the same way, so authoring an intent and maintaining one use the same rules. See `plugins/fleet-control/README.md`.
+`plugins/fleet-control` is a Claude Code plugin with five skills — `fleet-intent`, `fleet-scaffold`, `fleet-audit`, `fleet-surface`, `product-intent` — the intent schema, the renderer and three worked examples from different domains. CI installs it from this repo as a marketplace; a person installs it the same way, so authoring an intent and maintaining one use the same rules. See `plugins/fleet-control/README.md`.
 
 ## Releasing
 

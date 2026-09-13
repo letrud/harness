@@ -7,7 +7,7 @@ The engine every fleet repo runs on: the intent contract, the renderer, the scri
 | Path | What it is |
 | --- | --- |
 | `.claude-plugin/marketplace.json` | Marketplace manifest. Fleet repos install `fleet-control@fleet-harness` from this repo's git URL |
-| `plugins/fleet-control/` | The plugin: four skills, the intent schema, the renderer, three worked examples |
+| `plugins/fleet-control/` | The plugin: five skills, the intent schema, the renderer, three worked examples |
 | `.github/workflows/on-intent-change.yml` | Reusable workflow fleet repos call when their intent changes |
 | `.github/workflows/rebuild-from-intent.yml` | Reusable workflow for a repo whose `intent/` is its specification: on an intent change, dispatches Claude to bring the implementation into line and open a PR |
 | `.github/workflows/selftest.yml` | Proves every worked example still scaffolds, audits and renders |
