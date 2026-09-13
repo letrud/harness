@@ -1,6 +1,6 @@
 {
   "name": "fleet-control",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Capture the intent of any fleet held against a standard — repos, data products, suppliers, models, controls — as a declarative spec, then scaffold, audit and render it. One renderer, one baseline declaration, no per-domain code.",
   "author": {
     "name": "Let's Consult"

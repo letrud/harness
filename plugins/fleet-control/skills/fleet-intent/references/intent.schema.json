@@ -637,6 +637,10 @@
                 "type": "string"
               },
               "description": "State -> sentence used in the drawer timeline."
+            },
+            "links": {
+              "type": "string",
+              "description": "Optional. Object of step key -> URL of the thing in that state right now (the run, the job, the ticket). Chips and the drawer timeline link to it; a step without a URL renders as before."
             }
           },
           "required": [

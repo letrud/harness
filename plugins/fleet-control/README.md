@@ -42,7 +42,7 @@ The standard is declared once, in the intent. The audit enforces it and the conf
 
 A dimension is expressed as exactly one of these, which is what keeps the format small and the pages consistent:
 
-- **sequence** — ordered steps, each in a state (build→test→scan→sign→release→deploy; screening→contract→approval)
+- **sequence** — ordered steps, each in a state (build→test→scan→sign→release→deploy; screening→contract→approval). An optional `links` field names an object of step → URL, so the chip for a running build opens the run
 - **gauge** — a number against a target, with a verdict and counters (coverage vs 80% + gate + open CVEs)
 - **matrix** — the same thing across slots, comparable (versions per environment; contract terms per market)
 - **facts** — flat attributes, each good or not (SBOM, signed, SLSA level; ISO 27001, SOC 2)

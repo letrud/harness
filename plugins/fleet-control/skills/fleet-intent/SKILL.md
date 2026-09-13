@@ -34,7 +34,7 @@ Dimensions are expressed with these, and only these. Choosing one forces useful 
 
 | Primitive  | Shape of the thing                                   | Examples                                                        |
 | ---------- | ---------------------------------------------------- | --------------------------------------------------------------- |
-| `sequence` | Ordered steps, each in a state                        | build→test→scan→sign→release→deploy; screening→contract→approval  |
+| `sequence` | Ordered steps, each in a state; optional `links` field of step → URL so a chip opens the thing in that state | build→test→scan→sign→release→deploy; screening→contract→approval  |
 | `gauge`    | One number against a target, with a verdict and counts| coverage vs 80% + gate + open CVEs; control coverage vs 90% + audit |
 | `matrix`   | The same thing present in several slots, comparable   | versions per environment; contract terms per market               |
 | `facts`    | Flat attributes, each good or not                     | SBOM, signed, SLSA level; ISO 27001, SOC 2                        |

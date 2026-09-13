@@ -251,6 +251,10 @@ h1{
   font-family:"Archivo",sans-serif;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
   border:1px solid transparent;
 }
+a.stage{text-decoration:none;cursor:pointer}
+a.stage:hover{filter:saturate(1.05) brightness(.97);text-decoration:underline;text-underline-offset:3px}
+.tl-link{font-size:11px;font-weight:500;color:var(--accent);text-decoration:none;margin-left:6px}
+.tl-link:hover{text-decoration:underline}
 .stage.s-ok{background:var(--ok-wash);color:var(--ok);border-color:color-mix(in srgb,var(--ok) 22%,transparent)}
 .stage.s-warn{background:var(--warn-wash);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 25%,transparent)}
 .stage.s-crit{background:var(--crit-wash);color:var(--crit);border-color:color-mix(in srgb,var(--crit) 25%,transparent)}
@@ -555,11 +559,18 @@ function sparkline(vals, color, w = 92, h = 24){
 }
 
 /* ---------- render primitives ---------- */
+function stepLink(d, it, key){
+  const u = d.render.links ? (get(it, d.render.links) || {})[key] : null;
+  return typeof u === "string" && /^https?:\/\//.test(u) ? u : null;
+}
 function pSequence(d, it){
   const src = get(it, d.render.field) || {};
   return `<div class="stages">` + (d.render.steps || []).map(st => {
-    const role = roleOf(src[st.key]);
-    return `<span class="stage ${chipCls(role)}" title="${esc(st.label || st.key)}: ${esc(src[st.key] ?? "not configured")}">${esc(st.short || st.key)}</span>`;
+    const role = roleOf(src[st.key]), href = stepLink(d, it, st.key);
+    const title = `${esc(st.label || st.key)}: ${esc(src[st.key] ?? "not configured")}${href ? " — open" : ""}`;
+    return href
+      ? `<a class="stage ${chipCls(role)}" href="${esc(href)}" target="_blank" rel="noopener" title="${title}">${esc(st.short || st.key)}</a>`
+      : `<span class="stage ${chipCls(role)}" title="${title}">${esc(st.short || st.key)}</span>`;
   }).join("") + `</div>`;
 }
 function pGauge(d, it){
@@ -843,9 +854,9 @@ function dimDetail(d, it){
   if (d.render.type === "sequence"){
     const src = get(it, d.render.field) || {};
     return `<div class="timeline">` + (d.render.steps || []).map(st => {
-      const role = roleOf(src[st.key]);
+      const role = roleOf(src[st.key]), href = stepLink(d, it, st.key);
       return `<div class="tl-item" style="--st:${col(role)}"><div class="tl-dot"></div><div>
-        <div class="tl-t">${esc(st.label || st.key)}</div>
+        <div class="tl-t">${esc(st.label || st.key)}${href ? ` <a class="tl-link" href="${esc(href)}" target="_blank" rel="noopener">open ↗</a>` : ""}</div>
         <div class="tl-s">${esc((d.render.stateNotes || {})[src[st.key]] || src[st.key] || "not configured")}</div></div></div>`;
     }).join("") + `</div>`;
   }
@@ -906,6 +917,7 @@ function render(){
 
 /* ---------- events ---------- */
 document.addEventListener("click", e => {
+  if (e.target.closest("a[href]")) return;
   const nav = e.target.closest("[data-view]");
   if (nav){ S.view = nav.dataset.view; render(); window.scrollTo({top:0, behavior:"smooth"}); return; }
   const f = e.target.closest("[data-filter]");

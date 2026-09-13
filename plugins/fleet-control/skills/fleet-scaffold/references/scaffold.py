@@ -94,6 +94,8 @@ def skeleton(spec, uid, cls=None, overrides=None):
         r = d.get("render", {})
         if r.get("type") == "sequence":
             out[r["field"]] = {s["key"]: absent for s in r.get("steps", [])}
+            if r.get("links"):
+                out[r["links"]] = {}
         elif r.get("type") == "gauge":
             out[r["value"]["field"]] = 0
             if r.get("verdict"):

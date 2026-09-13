@@ -60,7 +60,8 @@
       ],
       "owner": "Nora Bekkevold",
       "runbook": true,
-      "auto": 96
+      "auto": 96,
+      "stageLinks": {}
     },
     {
       "name": "checkout-web",
@@ -122,7 +123,10 @@
       ],
       "owner": "Jonas Riiser",
       "runbook": true,
-      "auto": 88
+      "auto": 88,
+      "stageLinks": {
+        "deploy": "https://github.com/acme/storefront/checkout-web/actions?query=is%3Ain_progress"
+      }
     },
     {
       "name": "identity-service",
@@ -184,7 +188,8 @@
       ],
       "owner": "Mira Solheim",
       "runbook": false,
-      "auto": 41
+      "auto": 41,
+      "stageLinks": {}
     },
     {
       "name": "pricing-engine",
@@ -246,7 +251,8 @@
       ],
       "owner": "Tobias Lund",
       "runbook": true,
-      "auto": 98
+      "auto": 98,
+      "stageLinks": {}
     },
     {
       "name": "notification-hub",
@@ -308,7 +314,8 @@
       ],
       "owner": "Nora Bekkevold",
       "runbook": true,
-      "auto": 84
+      "auto": 84,
+      "stageLinks": {}
     },
     {
       "name": "ledger-batch",
@@ -370,7 +377,8 @@
       ],
       "owner": "Mira Solheim",
       "runbook": false,
-      "auto": 37
+      "auto": 37,
+      "stageLinks": {}
     },
     {
       "name": "search-indexer",
@@ -432,7 +440,8 @@
       ],
       "owner": "Elin Hagen",
       "runbook": true,
-      "auto": 81
+      "auto": 81,
+      "stageLinks": {}
     },
     {
       "name": "fraud-scoring",
@@ -494,7 +503,8 @@
       ],
       "owner": "Elin Hagen",
       "runbook": true,
-      "auto": 69
+      "auto": 69,
+      "stageLinks": {}
     },
     {
       "name": "partner-gateway",
@@ -556,7 +566,8 @@
       ],
       "owner": "Tobias Lund",
       "runbook": true,
-      "auto": 76
+      "auto": 76,
+      "stageLinks": {}
     },
     {
       "name": "design-tokens",
@@ -618,7 +629,8 @@
       ],
       "owner": "Jonas Riiser",
       "runbook": true,
-      "auto": 94
+      "auto": 94,
+      "stageLinks": {}
     },
     {
       "name": "legacy-billing",
@@ -657,10 +669,10 @@
         "prod": "warn"
       },
       "deploys": 0,
-      "lead": "\u2014",
+      "lead": "—",
       "leadM": 99999,
       "cfr": 0,
-      "mttr": "\u2014",
+      "mttr": "—",
       "slsa": 0,
       "sbom": false,
       "signed": false,
@@ -680,7 +692,8 @@
       ],
       "owner": "unassigned",
       "runbook": false,
-      "auto": 12
+      "auto": 12,
+      "stageLinks": {}
     },
     {
       "name": "telemetry-collector",
@@ -742,7 +755,8 @@
       ],
       "owner": "Tobias Lund",
       "runbook": true,
-      "auto": 93
+      "auto": 93,
+      "stageLinks": {}
     },
     {
       "name": "customer-portal",
@@ -804,7 +818,8 @@
       ],
       "owner": "Jonas Riiser",
       "runbook": true,
-      "auto": 72
+      "auto": 72,
+      "stageLinks": {}
     },
     {
       "name": "event-bus",
@@ -866,7 +881,8 @@
       ],
       "owner": "Mira Solheim",
       "runbook": true,
-      "auto": 91
+      "auto": 91,
+      "stageLinks": {}
     }
   ]
 }
