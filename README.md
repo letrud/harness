@@ -57,19 +57,27 @@ on:
     branches: [main]
     paths: ["intent/**"]
   workflow_dispatch:
+    inputs:
+      before: { type: string, default: "" }   # set by the push hand-off
+      after:  { type: string, default: "" }   # empty = full reconcile
 permissions:
   contents: write
   pull-requests: write
   id-token: write
+  actions: write
 jobs:
   rebuild:
     uses: letrud/harness/.github/workflows/rebuild-from-intent.yml@v1
+    with:
+      before: ${{ inputs.before }}
+      after: ${{ inputs.after }}
     secrets: inherit
 ```
 
 Everything the agent needs — language, layout, distribution, how the implementation proves itself — it reads from the Markdown under `intent/`. Where the intent is silent it decides and records the decision in the PR, never in the intent. What the workflow adds on top:
 
-- **the change** — the `intent/` diff of the push, or "full reconcile" on dispatch
+- **the change** — the `intent/` diff of the push, or "full reconcile" on a bare dispatch. A push cannot run the agent directly (the action accepts dispatch, schedule and PR/issue events, not push), so a push re-dispatches the caller's own workflow with its before/after commits
+- **secrets** — the agent's environment gets exactly the secrets the repository's own workflows reference, so it can run the intent's proofs against real test environments before committing; never the Claude credentials or the job token
 - **resume** — a `rebuild/*` branch ahead of the default branch with no PR is checked out and continued, not redone; the agent commits and pushes as it goes so a cut-short session leaves its work behind
 - **conventions** — `build.yml` proves the implementation on every push and PR; `release.yml` ships on a `v*` tag. These are the harness's, not the repo's, because other systems read stage state from them
 - **transcript** — result, turns, cost and the agent's last words go in the job summary. On a private repo the full transcript is kept as an artifact for 30 days; on a public repo it is not, because it contains every file the agent read

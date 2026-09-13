@@ -9,9 +9,20 @@ name: Rebuild from intent
 #       branches: [main]
 #       paths: ["intent/**"]
 #     workflow_dispatch:
+#       inputs:
+#         before: { type: string, default: "" }   # set by the push hand-off
+#         after:  { type: string, default: "" }   # empty = full reconcile
+#   permissions:
+#     contents: write
+#     pull-requests: write
+#     id-token: write
+#     actions: write
 #   jobs:
 #     rebuild:
 #       uses: letrud/harness/.github/workflows/rebuild-from-intent.yml@v1
+#       with:
+#         before: ${{ inputs.before }}
+#         after: ${{ inputs.after }}
 #       secrets: inherit
 #
 # Everything the agent needs to know — language, layout, distribution, how the
@@ -19,9 +30,13 @@ name: Rebuild from intent
 # the intent is silent the agent decides and records the decision in the PR.
 #
 # What it does, in order:
-#   1. works out what changed under intent/ (the push range, or "everything" on dispatch)
-#   2. runs the caller's check, if one is given, to show whether the implementation still holds
-#   3. dispatches Claude Code to bring the implementation into line with the intent
+#   0. a push cannot run the agent (claude-code-action accepts dispatch, schedule and
+#      PR/issue events, not push), so a push hands off: it re-dispatches the caller's
+#      own workflow with the push's before/after commits and stops
+#   1. works out what changed under intent/ (before..after, or "everything")
+#   2. resumes an unfinished branch, if one exists
+#   3. runs the caller's check, if one is given
+#   4. dispatches Claude Code to bring the implementation into line with the intent
 #      and open a pull request — never merging
 #
 # Without a credential (CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY) it records
@@ -31,6 +46,16 @@ name: Rebuild from intent
 on:
   workflow_call:
     inputs:
+      before:
+        description: "Commit before the intent change. Set by the push hand-off; empty = full reconcile."
+        required: false
+        default: ""
+        type: string
+      after:
+        description: "Commit after the intent change. Set by the push hand-off."
+        required: false
+        default: ""
+        type: string
       intent_dir:
         description: "Directory holding the specification."
         required: false
@@ -73,9 +98,28 @@ permissions:
   contents: write
   pull-requests: write
   id-token: write
+  actions: write
 
 jobs:
+  # A push re-dispatches the caller's own workflow, carrying the push range.
+  handoff:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Re-dispatch as workflow_dispatch with the push range
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+          REF: ${{ github.ref_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          file="${WORKFLOW_REF#*/.github/workflows/}"; file="${file%@*}"
+          echo "push to $REF changed the intent; dispatching $file with $BEFORE..$AFTER"
+          gh workflow run "$file" --repo "$GITHUB_REPOSITORY" --ref "$REF" -f before="$BEFORE" -f after="$AFTER"
+
   rebuild:
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -86,12 +130,11 @@ jobs:
       - name: What changed under the intent
         id: change
         env:
-          BEFORE: ${{ github.event.before }}
-          AFTER: ${{ github.sha }}
+          BEFORE: ${{ inputs.before }}
+          AFTER: ${{ inputs.after || github.sha }}
           INTENT: ${{ inputs.intent_dir }}
-          EVENT: ${{ github.event_name }}
         run: |
-          if [ "$EVENT" = "push" ] && [ -n "$BEFORE" ] && git cat-file -e "$BEFORE" 2>/dev/null; then
+          if [ -n "$BEFORE" ] && git cat-file -e "$BEFORE" 2>/dev/null && git cat-file -e "$AFTER" 2>/dev/null; then
             echo "kind=diff" >> "$GITHUB_OUTPUT"
             git diff --stat "$BEFORE" "$AFTER" -- "$INTENT" > intent-change.stat
             git diff "$BEFORE" "$AFTER" -- "$INTENT" > intent-change.diff
@@ -401,5 +444,5 @@ jobs:
             echo
             if [ -s intent-change.stat ]; then echo '```'; cat intent-change.stat; echo '```'; fi
             echo
-            [ -f digest.md ] && cat digest.md
+            if [ -f digest.md ]; then cat digest.md; fi
           } >> "$GITHUB_STEP_SUMMARY"
