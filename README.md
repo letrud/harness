@@ -22,8 +22,11 @@ jobs:
       harness_repo: letrud/harness
       harness_ref: v1
     secrets:
-      anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+      anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}            # or, on a Pro/Max subscription,
+      claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }} # from `claude setup-token`
 ```
+
+Neither secret is required: without one the workflow validates, audits and renders, and reports the gap instead of dispatching Claude to close it.
 
 The workflow validates the intent, checks whether the fleet repo's data and collector still satisfy it, runs the audit, and — only when the contract actually broke — dispatches Claude Code to update that repo's local implementation and open a PR. It always regenerates the control room.
 

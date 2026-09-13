@@ -8,7 +8,11 @@ name: Fleet intent change
 #       with:
 #         fleet: software-factory
 #       secrets:
-#         anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+#         anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}          # or
+#         claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+#
+# Without either credential the workflow still validates, audits and renders;
+# it just reports the gap instead of dispatching Claude to close it.
 #
 # What it does, in order:
 #   1. validates the intent against the schema
@@ -47,7 +51,11 @@ on:
         type: boolean
     secrets:
       anthropic_api_key:
-        required: true
+        description: "Anthropic API key. Either this or claude_code_oauth_token enables autofix."
+        required: false
+      claude_code_oauth_token:
+        description: "Claude Code OAuth token from `claude setup-token` (Pro/Max subscription)."
+        required: false
 
 permissions:
   contents: write
@@ -110,14 +118,24 @@ jobs:
             intent/${{ inputs.fleet }}.intent.json data/${{ inputs.fleet }}.data.json \
             | tee audit.txt
 
+      - name: Is a Claude credential available
+        id: cred
+        env:
+          API_KEY: ${{ secrets.anthropic_api_key }}
+          OAUTH: ${{ secrets.claude_code_oauth_token }}
+        run: |
+          if [ -n "$API_KEY" ] || [ -n "$OAUTH" ]; then echo "present=true" >> "$GITHUB_OUTPUT"
+          else echo "present=false" >> "$GITHUB_OUTPUT"; echo "::notice::no ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN — report only, Claude will not be dispatched"; fi
+
       # Only runs when something the intent requires is missing downstream.
       # Claude gets the fleet-control skills through the harness marketplace,
       # so it works from the same rules used to author the intent.
       - name: Update the local implementation to match the intent
-        if: ${{ inputs.autofix && (steps.contract.outcome == 'failure' || steps.sources.outcome == 'failure') }}
+        if: ${{ inputs.autofix && steps.cred.outputs.present == 'true' && (steps.contract.outcome == 'failure' || steps.sources.outcome == 'failure') }}
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.anthropic_api_key }}
+          claude_code_oauth_token: ${{ secrets.claude_code_oauth_token }}
           plugin_marketplaces: https://github.com/${{ inputs.harness_repo }}.git
           plugins: fleet-control@fleet-harness
           claude_args: ${{ inputs.claude_args }}
