@@ -49,7 +49,7 @@ on:
       claude_args:
         description: "Extra args for the Claude CLI (model, turn limit)."
         required: false
-        default: "--max-turns 250"
+        default: "--max-turns 500"
         type: string
       branch_prefix:
         description: "Prefix for the branch Claude works on."
@@ -103,6 +103,34 @@ jobs:
           echo "changed under $INTENT/:"
           cat intent-change.stat
 
+      # A session cut short (turn budget, timeout) leaves its work on a branch.
+      # If such a branch exists with no pull request, continue from it rather
+      # than starting over from the default branch.
+      - name: Resume unfinished work
+        id: resume
+        env:
+          PREFIX: ${{ inputs.branch_prefix }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE: ${{ github.ref_name }}
+        run: |
+          branch=""
+          for b in $(git for-each-ref --sort=-committerdate --format='%(refname:short)' "refs/remotes/origin/${PREFIX}*"); do
+            short="${b#origin/}"
+            open=$(gh pr list --head "$short" --state open --json number --jq 'length' 2>/dev/null || echo 0)
+            if [ "$open" = "0" ] && [ "$(git rev-list --count "origin/$BASE..$b")" -gt 0 ]; then branch="$short"; break; fi
+          done
+          if [ -n "$branch" ]; then
+            git checkout -q -B "$branch" "origin/$branch"
+            ahead=$(git rev-list --count "origin/$BASE..HEAD")
+            git log --format='%h %s' "origin/$BASE..HEAD" > resume.log
+            { echo "branch=$branch"; echo "ahead=$ahead"; } >> "$GITHUB_OUTPUT"
+            echo "resuming $branch: $ahead commits ahead of $BASE, no pull request yet"
+            cat resume.log
+          else
+            echo "branch=" >> "$GITHUB_OUTPUT"; echo "ahead=0" >> "$GITHUB_OUTPUT"
+            echo "no unfinished work under ${PREFIX}*"
+          fi
+
       - name: Does the implementation still hold
         id: check
         if: inputs.check != ''
@@ -138,6 +166,8 @@ jobs:
           CHECK_OUTCOME: ${{ steps.check.outcome }}
           INSTRUCTIONS: ${{ inputs.instructions }}
           PREFIX: ${{ inputs.branch_prefix }}
+          RESUME: ${{ steps.resume.outputs.branch }}
+          AHEAD: ${{ steps.resume.outputs.ahead }}
         run: |
           {
             cat <<EOF
@@ -185,6 +215,19 @@ jobs:
               echo "This is a full reconcile: treat the whole intent as newly stated and make the"
               echo "implementation satisfy all of it."
             fi
+            if [ -n "$RESUME" ]; then
+              echo
+              echo "## Unfinished work — continue, do not start over"
+              echo
+              echo "A previous session was cut short. Its work is on the branch \`$RESUME\`, $AHEAD commits"
+              echo "ahead of the default branch, with no pull request yet. You are checked out on it."
+              echo "Read its log and its code first; then finish what it began — do not recreate what"
+              echo "already exists, and do not start a new branch. Commit and push to \`$RESUME\`."
+              echo
+              echo "Its commits, newest first:"
+              echo
+              echo '```'; cat resume.log; echo '```'
+            fi
             if [ -n "$CHECK" ]; then
               echo
               echo "## Does the implementation currently hold"
@@ -217,10 +260,13 @@ jobs:
 
           ## Delivering
 
-          Before you write code, create a branch prefixed \`$PREFIX\` and push it. Commit and push
-          as you go — after each coherent step, not only at the end — so that nothing is lost if
-          this session is cut short. When done, open a pull request against the default branch
-          with \`gh pr create\`. The description states, in plain language: what
+          Unless you are continuing on an existing branch, create one prefixed \`$PREFIX\` and
+          push it before you write code. Commit and push as you go — after each coherent step,
+          not only at the end — so that nothing is lost if this session is cut short. Your turn
+          budget is finite: leave the CI workflow and the pull request for no later than the
+          last quarter of your work, and if you must choose, a pull request describing what is
+          unfinished beats unfinished work with no pull request. Open it against the default
+          branch with \`gh pr create\`. The description states, in plain language: what
           the intent required (and what changed, if this was a change), how the implementation
           satisfies each part of it, what you decided where the intent was silent, and what you
           could not verify. Do not merge.
@@ -301,6 +347,7 @@ jobs:
           CHECK: ${{ inputs.check }}
           CHECK_OUTCOME: ${{ steps.check.outcome }}
           PRESENT: ${{ steps.cred.outputs.present }}
+          RESUME: ${{ steps.resume.outputs.branch }}
           DISPATCHED: ${{ inputs.autofix && steps.cred.outputs.present == 'true' }}
         run: |
           {
@@ -309,6 +356,7 @@ jobs:
             echo "| | |"
             echo "| --- | --- |"
             echo "| change | $KIND |"
+            echo "| resumed | ${RESUME:-no} |"
             echo "| check | ${CHECK:+$CHECK_OUTCOME}${CHECK:-none configured} |"
             echo "| credential | $PRESENT |"
             if [ "$DISPATCHED" = "true" ]; then echo "| rebuild | dispatched — see the pull request |"; else echo "| rebuild | not dispatched |"; fi
