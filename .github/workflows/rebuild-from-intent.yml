@@ -128,11 +128,13 @@ jobs:
           changed=$(git diff --name-only "$BASE...HEAD")
           intent=$(echo "$changed" | grep "^$INTENT/" || true)
           impl=$(echo "$changed" | grep -v "^$INTENT/" || true)
-          derived=""
+          : > derived.txt
           IFS=',' read -ra paths <<< "$DERIVED"
-          for d in "${paths[@]}"; do d="${d## }"; d="${d%% }"; [ -z "$d" ] && continue; derived+=$(echo "$changed" | grep "^${d%/}/" || true); derived+=$'
-'; done
-          derived=$(echo "$derived" | sed '/^$/d')
+          for d in "${paths[@]}"; do
+            d="$(echo "$d" | xargs)"; [ -z "$d" ] && continue
+            echo "$changed" | grep "^${d%/}/" >> derived.txt || true
+          done
+          derived=$(sed '/^$/d' derived.txt)
           fail=0
           if [ -n "$derived" ]; then
             echo "::error::this change touches files the automation on the default branch owns. Regenerate there; never carry them in a pull request."
