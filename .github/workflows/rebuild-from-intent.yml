@@ -362,6 +362,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           show_full_output: ${{ github.event.repository.private == true }}
+          allowed_bots: github-actions      # the push hand-off dispatches as this bot
           anthropic_api_key: ${{ secrets.anthropic_api_key }}
           claude_code_oauth_token: ${{ secrets.claude_code_oauth_token }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
