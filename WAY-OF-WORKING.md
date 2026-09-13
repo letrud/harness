@@ -66,6 +66,8 @@ Read the pull request as a claim and CI as its verification:
 4. decisions where the intent was silent are stated, and none should have been an intent change instead;
 5. what could not be verified is said plainly.
 
+A pull request opened by the agent is authored by `github-actions[bot]`, and GitHub holds its workflow runs until a person approves them once (the run's page → *Approve and run*, or `gh api -X POST repos/<owner>/<repo>/actions/runs/<id>/approve`). A push to the branch by a person lifts the hold too. Until then the checks show as awaiting action, not as failed.
+
 Merge with a merge commit; the agent's commits are its account of the work. Rebase, do not merge, when the branch is behind — and if a derived file conflicts, take the default branch's copy and regenerate.
 
 ## 8. Releasing
