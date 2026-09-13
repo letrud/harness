@@ -38,6 +38,10 @@ A new capability belongs in the intent format *and* the renderer together, added
 
 A new example must come from a genuinely different domain. The examples exist to prove the abstraction is not a software pattern in disguise; a fourth software-shaped fleet proves nothing. Add it to the `selftest.yml` matrix in the same PR.
 
+## The way of working is a deliverable
+
+`WAY-OF-WORKING.md` states how repositories built on this harness are changed, proven, accepted and released. When a rule there needs enforcing, enforce it once, here — in the brief's conventions or a reusable workflow — so every caller inherits it on the next `v1`. When you learn something running a consumer repo, it goes there first, then into the skills, never into a caller or a prompt.
+
 ## Two kinds of intent, two workflows
 
 A *fleet* intent (`on-intent-change.yml`) describes many units held against a standard; the data file is the implementation, and Claude is dispatched only when the contract breaks mechanically. A *product* intent (`rebuild-from-intent.yml`) is a specification under `intent/` from which source code is written; every change to it is a reason to reconcile the implementation, so Claude is dispatched on each change, with the diff. Both never edit the intent, both open pull requests, both run report-only without a credential.

@@ -33,7 +33,7 @@ These are the sections an agent cannot do without. Each was learned by leaving i
 
 **2. Unknown is null; status reflects execution.** The honesty rules are the load-bearing part. *"A host, path or header that has not been confirmed MUST be `null`, never inferred."* *"`verified` MUST mean real calls succeeded."* An agent follows these to the letter, and they are what make every later failure legible instead of hidden behind a plausible guess.
 
-**3. Generated outputs, declared.** Name the files under `intent/` that the implementation writes - evidence, generated docs - and say who writes them and when (the evaluation, on the default branch, by CI). This is what lets "never edit the intent" coexist with "record what happened". Derived files under version control conflict on every merge unless one writer owns them.
+**3. Generated outputs, declared - and who writes them.** Name the files under `intent/` that the implementation writes - evidence, generated docs - and state that the automation on the default branch writes them, after a change is accepted, and that *a change to the implementation modifies nothing under `intent/`*. Two writers own the folder - people for the specification and the declared data, automation for the generated files - and a pull request is neither. This is what lets "never edit the intent" coexist with "record what happened"; without it, every pull request carries regenerated evidence and conflicts with the default branch on merge. Say too that a change is to the intent or to the implementation, never both, so that CI can refuse the mixture.
 
 **4. Acceptance.** The section most often missing. State:
 - what proves the implementation: unit tests against a stand-in prove the logic; only evaluation against the real test environment proves the counterparty accepts what is sent. Both, neither substitutes;
@@ -68,6 +68,10 @@ Where the intent is silent, the agent decides like a careful engineer and record
 - **Suppose a result is empty. Can the implementation tell the reader why, from the intent alone?**
 - **Is every choice you care about written down?** Language, layout, distribution, defaults.
 - **Could this folder be handed to a stranger in another language and produce the same product?** That is the test the whole approach rests on.
+
+## The way of working
+
+How a change moves from intent to release - who proves what, how a pull request is read, why derived data has one writer - is the harness's `WAY-OF-WORKING.md`. An intent that follows this skill makes every step of it enforceable.
 
 ## Changing an intent
 

@@ -245,6 +245,12 @@ jobs:
             \`.github/workflows/build.yml\`. Releases, if the intent calls for shipped
             artefacts, are \`.github/workflows/release.yml\` on a \`v*\` tag. Other systems
             read stage state from these two names.
+          - A change is to the intent or to the implementation, never both. \`build.yml\` MUST
+            refuse a pull request that modifies \`$INTENT/\` together with anything outside it.
+            Your pull request modifies nothing under \`$INTENT/\` — the automation on the default
+            branch writes whatever the intent declares as generated (evidence, generated docs)
+            after your change is accepted. Run the proofs, state their result per instance and
+            per operation in the pull request, and discard the files they regenerate.
           - Do not modify the workflow that dispatched you.
           - The runner already has Go, Node, Python, Java, .NET and Rust. Install anything
             else you need in the job, and in \`build.yml\`.

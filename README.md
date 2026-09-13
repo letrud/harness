@@ -19,6 +19,8 @@ product repos        psd2-cli           intent/ is the specification; the code i
 
 Neither workflow ever edits an intent. Both open pull requests and never merge. Both run without a Claude credential — they then validate, report and stop.
 
+**How work moves through these repositories — intent changes vs implementation changes, who proves what, how a pull request is accepted, how a release happens — is [WAY-OF-WORKING.md](WAY-OF-WORKING.md).** Read it before changing any of them.
+
 ## Fleet repos — `on-intent-change.yml`
 
 A fleet intent describes many comparable units held against a standard. The data file is the implementation; a collector fills it from real sources. On a change under `intent/` the workflow checks, in order:
@@ -79,7 +81,7 @@ Everything the agent needs — language, layout, distribution, how the implement
 - **the change** — the `intent/` diff of the push, or "full reconcile" on a bare dispatch. A push cannot run the agent directly (the action accepts dispatch, schedule and PR/issue events, not push), so a push re-dispatches the caller's own workflow with its before/after commits
 - **secrets** — the agent's environment gets exactly the secrets the repository's own workflows reference, so it can run the intent's proofs against real test environments before committing; never the Claude credentials or the job token
 - **resume** — a `rebuild/*` branch ahead of the default branch with no PR is checked out and continued, not redone; the agent commits and pushes as it goes so a cut-short session leaves its work behind
-- **conventions** — `build.yml` proves the implementation on every push and PR; `release.yml` ships on a `v*` tag. These are the harness's, not the repo's, because other systems read stage state from them
+- **conventions** — `build.yml` proves the implementation on every push and PR and refuses a pull request that changes `intent/` and the implementation together; `release.yml` ships on a `v*` tag. A change never carries generated files under `intent/` — the automation on the default branch writes those. These are the harness's, not the repo's, because other systems read stage state from them and every repo must behave the same way
 - **transcript** — result, turns, cost and the agent's last words go in the job summary. On a private repo the full transcript is kept as an artifact for 30 days; on a public repo it is not, because it contains every file the agent read
 - **budget** — `--max-turns 500` and a 120-minute job by default; override with `claude_args`
 

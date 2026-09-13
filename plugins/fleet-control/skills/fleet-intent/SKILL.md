@@ -68,7 +68,7 @@ An intent is read by agents as well as people - the harness dispatches one when 
 - **Silence is a decision surface.** Nothing outside the intent reaches the agent - not a commit message, not a chat. Where the intent is silent it decides and records the decision in the pull request, never in the intent. If you care about a choice, it is one line in the intent.
 - **Specific knowledge goes in the data, not in prompts.** What an adapter learned about its system - a quirk, a mapping, a workflow-name-to-stage convention - lives as a declared field on the instance (`pipeline`, `envMap`), where the next implementer inherits it.
 
-The `product-intent` skill covers the same ground for a specification that source code is written from.
+The `product-intent` skill covers the same ground for a specification that source code is written from; the harness's `WAY-OF-WORKING.md` says how a change then moves to acceptance and release.
 
 ## Data is separate
 
