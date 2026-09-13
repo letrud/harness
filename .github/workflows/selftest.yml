@@ -82,6 +82,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Reusable workflows parse and declare their inputs
+        run: |
+          pip install pyyaml >/dev/null
+          python3 - <<'PY'
+          import yaml, pathlib
+          for f in ("on-intent-change.yml", "rebuild-from-intent.yml"):
+              d = yaml.safe_load(pathlib.Path(".github/workflows", f).read_text())
+              call = d[True]["workflow_call"] if True in d else d["on"]["workflow_call"]
+              assert call["inputs"], f"{f}: no inputs"
+              assert {"anthropic_api_key", "claude_code_oauth_token"} <= set(call["secrets"]), f"{f}: both credentials must be accepted"
+              print(f, len(call["inputs"]), "inputs")
+          PY
       - name: Marketplace and plugin manifests are well formed
         run: |
           python3 - <<'PY'

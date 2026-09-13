@@ -4,7 +4,8 @@ The engine three fleet repos run on — and a Claude Code plugin marketplace, so
 
 ```
 harness ──┬── plugins/fleet-control   the intent contract, renderer, scripts, skills
-          ├── reusable workflow       called by each fleet repo on intent change
+          ├── on-intent-change        reusable workflow, called by each fleet repo on intent change
+          ├── rebuild-from-intent     reusable workflow, called by a product repo whose intent/ is its spec
           └── marketplace             fleet-control@fleet-harness, installed in CI
 
 software-factory ──► intent + data + collector ──► control room
@@ -29,6 +30,30 @@ jobs:
 Neither secret is required: without one the workflow validates, audits and renders, and reports the gap instead of dispatching Claude to close it.
 
 The workflow validates the intent, checks whether the fleet repo's data and collector still satisfy it, runs the audit, and — only when the contract actually broke — dispatches Claude Code to update that repo's local implementation and open a PR. It always regenerates the control room.
+
+## Using it from a product repo
+
+For a repository whose `intent/` is the specification and whose code is written from it:
+
+```yaml
+on:
+  push:
+    branches: [main]
+    paths: ["intent/**"]
+  workflow_dispatch:
+jobs:
+  rebuild:
+    uses: letrud/harness/.github/workflows/rebuild-from-intent.yml@v1
+    with:
+      toolchain: go
+      check: go vet ./... && go test ./...
+      instructions: |
+        decisions the intent leaves to the implementer that this repo has made
+    secrets:
+      claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+```
+
+On every change under `intent/` it hands Claude the diff, the outcome of your check, and your instructions, and Claude opens a pull request bringing the implementation into line. Without a credential it records the change and stops.
 
 ## Using it locally
 

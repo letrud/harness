@@ -1,0 +1,278 @@
+name: Rebuild from intent
+
+# Reusable workflow for a repo whose intent/ is the specification and whose
+# implementation is written from it. A caller runs it when intent/ changes:
+#
+#   on:
+#     push:
+#       branches: [main]
+#       paths: ["intent/**"]
+#     workflow_dispatch:
+#   jobs:
+#     rebuild:
+#       uses: letrud/harness/.github/workflows/rebuild-from-intent.yml@v1
+#       with:
+#         toolchain: go
+#         check: go vet ./... && go test ./...
+#         instructions: |
+#           anything the intent leaves to the implementer that this repo has decided
+#       secrets:
+#         claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}   # or anthropic_api_key
+#
+# What it does, in order:
+#   1. works out what changed under intent/ (the push range, or "everything" on dispatch)
+#   2. runs the caller's check, if any, to show whether the implementation still holds
+#   3. dispatches Claude Code to bring the implementation into line with the intent
+#      and open a pull request — never merging
+#
+# Without a credential it records the intent change and stops. Nothing here
+# edits intent/: the intent is the contract, and code is downstream of it.
+
+on:
+  workflow_call:
+    inputs:
+      intent_dir:
+        description: "Directory holding the specification."
+        required: false
+        default: "intent"
+        type: string
+      toolchain:
+        description: "go | node | python | none — what to set up on the runner."
+        required: false
+        default: "none"
+        type: string
+      toolchain_version:
+        description: "Version for the toolchain setup action. Empty = the action's default."
+        required: false
+        default: ""
+        type: string
+      check:
+        description: "Shell command that proves the implementation satisfies the intent (tests, the implementation's own build). Its outcome is shown to Claude."
+        required: false
+        default: ""
+        type: string
+      instructions:
+        description: "Repo-specific instructions appended to the prompt: decisions the intent leaves to the implementer, names CI must use, and so on."
+        required: false
+        default: ""
+        type: string
+      allowed_tools:
+        description: "Extra --allowedTools entries, comma-separated (e.g. Bash(go:*),Bash(npm:*))."
+        required: false
+        default: ""
+        type: string
+      claude_args:
+        description: "Extra args for the Claude CLI (model, turn limit)."
+        required: false
+        default: "--max-turns 250"
+        type: string
+      branch_prefix:
+        description: "Prefix for the branch Claude works on."
+        required: false
+        default: "rebuild/"
+        type: string
+      autofix:
+        description: "Dispatch Claude. false = record the change only."
+        required: false
+        default: true
+        type: boolean
+    secrets:
+      anthropic_api_key:
+        description: "Anthropic API key. Either this or claude_code_oauth_token enables the rebuild."
+        required: false
+      claude_code_oauth_token:
+        description: "Claude Code OAuth token from `claude setup-token` (Pro/Max subscription)."
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        if: inputs.toolchain == 'go'
+        with:
+          go-version: ${{ inputs.toolchain_version || 'stable' }}
+          cache: false
+      - uses: actions/setup-node@v4
+        if: inputs.toolchain == 'node'
+        with:
+          node-version: ${{ inputs.toolchain_version || 'lts/*' }}
+      - uses: actions/setup-python@v5
+        if: inputs.toolchain == 'python'
+        with:
+          python-version: ${{ inputs.toolchain_version || '3.x' }}
+
+      - name: What changed under the intent
+        id: change
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+          INTENT: ${{ inputs.intent_dir }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = "push" ] && [ -n "$BEFORE" ] && git cat-file -e "$BEFORE" 2>/dev/null; then
+            echo "kind=diff" >> "$GITHUB_OUTPUT"
+            git diff --stat "$BEFORE" "$AFTER" -- "$INTENT" > intent-change.stat
+            git diff "$BEFORE" "$AFTER" -- "$INTENT" > intent-change.diff
+          else
+            echo "kind=full" >> "$GITHUB_OUTPUT"
+            : > intent-change.stat
+            : > intent-change.diff
+          fi
+          echo "changed under $INTENT/:"
+          cat intent-change.stat
+
+      - name: Does the implementation still hold
+        id: check
+        if: inputs.check != ''
+        continue-on-error: true
+        env:
+          CHECK: ${{ inputs.check }}
+        run: |
+          set -o pipefail
+          bash -c "$CHECK" 2>&1 | tee check.txt
+
+      - name: Is a Claude credential available
+        id: cred
+        env:
+          API_KEY: ${{ secrets.anthropic_api_key }}
+          OAUTH: ${{ secrets.claude_code_oauth_token }}
+        run: |
+          if [ -n "$API_KEY" ] || [ -n "$OAUTH" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::no ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN — the intent change is recorded, nothing is rebuilt"
+          fi
+
+      # The prompt is assembled here rather than inline so that optional sections
+      # (the diff, the check, the caller's instructions) appear only when they exist.
+      - name: Compose the brief
+        id: brief
+        if: ${{ inputs.autofix && steps.cred.outputs.present == 'true' }}
+        env:
+          INTENT: ${{ inputs.intent_dir }}
+          KIND: ${{ steps.change.outputs.kind }}
+          CHECK: ${{ inputs.check }}
+          CHECK_OUTCOME: ${{ steps.check.outcome }}
+          INSTRUCTIONS: ${{ inputs.instructions }}
+          PREFIX: ${{ inputs.branch_prefix }}
+        run: |
+          {
+            cat <<EOF
+          The specification of this repository lives under \`$INTENT/\` and it has changed.
+          The implementation is written from it. Bring the implementation back into line
+          with the intent — or, if there is no implementation yet, build it.
+
+          ## Ground rules
+
+          - \`$INTENT/\` is the source of truth. Read every Markdown file at its top level in
+            full before writing anything, then the rest of the directory. Where code and intent
+            disagree, the code is wrong.
+          - Never edit \`$INTENT/\` except files the intent itself declares as generated output
+            of the implementation. Never edit it to make a check pass.
+          - Unknown is unknown. Do not infer a value, a host, a path or a behaviour the intent
+            does not state or that you have not confirmed by running it.
+          - Every MUST in the intent is a requirement; every MUST NOT is a test you should be
+            able to point at. Where the intent is silent, decide like a careful engineer and
+            record the decision in the pull request, not in the intent.
+          - Honesty over completeness. What could not be verified is said so, in the code's
+            own reporting and in the pull request.
+
+          ## What changed
+
+          EOF
+            if [ "$KIND" = "diff" ]; then
+              echo "The intent changed in this push. The statistics and the full diff are in"
+              echo "\`intent-change.stat\` and \`intent-change.diff\` in the workspace — read the diff"
+              echo "before anything else; it is the reason you are here."
+            else
+              echo "This is a full reconcile: treat the whole intent as newly stated and make the"
+              echo "implementation satisfy all of it."
+            fi
+            if [ -n "$CHECK" ]; then
+              echo
+              echo "## Does the implementation currently hold"
+              echo
+              echo "The caller's check \`$CHECK\` finished with outcome **$CHECK_OUTCOME**. Its output"
+              echo "is in \`check.txt\` in the workspace."
+            fi
+            cat <<EOF
+
+          ## What to produce
+
+          1. The implementation change, or the implementation.
+          2. Tests that pin the intent's requirements — in particular anything it states as
+             MUST NOT.
+          3. Continuous integration that proves the implementation against the intent on every
+             push and pull request. If such a workflow exists, keep it true; if it does not, add
+             it. The repo-specific instructions below may name the files it must use.
+          4. Documentation only where it describes how to build and where the implementation
+             lives; keep the repository's voice.
+
+          EOF
+            if [ -n "$CHECK" ]; then echo "Run \`$CHECK\` until it passes."; else echo "Run whatever proves the implementation before you finish."; fi
+            if [ -n "$INSTRUCTIONS" ]; then
+              echo
+              echo "## Repo-specific instructions"
+              echo
+              printf '%s\n' "$INSTRUCTIONS"
+            fi
+            cat <<EOF
+
+          ## Delivering
+
+          Commit on a branch prefixed \`$PREFIX\`, push it, and open a pull request against the
+          default branch with \`gh pr create\`. The description states, in plain language: what
+          the intent required (and what changed, if this was a change), how the implementation
+          satisfies each part of it, what you decided where the intent was silent, and what you
+          could not verify. Do not merge.
+          EOF
+          } > brief.md
+          echo "brief: $(wc -l < brief.md) lines"
+          { echo "text<<BRIEF_EOF"; cat brief.md; echo "BRIEF_EOF"; } >> "$GITHUB_OUTPUT"
+
+      - name: Bring the implementation into line with the intent
+        if: ${{ inputs.autofix && steps.cred.outputs.present == 'true' }}
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.anthropic_api_key }}
+          claude_code_oauth_token: ${{ secrets.claude_code_oauth_token }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch_prefix: ${{ inputs.branch_prefix }}
+          prompt: ${{ steps.brief.outputs.text }}
+          claude_args: |
+            ${{ inputs.claude_args }}
+            --allowedTools "Bash(git:*),Bash(gh pr create:*),Bash(gh pr view:*),Bash(ls:*),Bash(cat:*),Bash(find:*),Bash(mkdir:*),Bash(chmod:*),Edit,Write,Read,Glob,Grep,MultiEdit${{ inputs.allowed_tools != '' && format(',{0}', inputs.allowed_tools) || '' }}"
+
+      - name: Summary
+        if: always()
+        env:
+          KIND: ${{ steps.change.outputs.kind }}
+          CHECK: ${{ inputs.check }}
+          CHECK_OUTCOME: ${{ steps.check.outcome }}
+          PRESENT: ${{ steps.cred.outputs.present }}
+          DISPATCHED: ${{ inputs.autofix && steps.cred.outputs.present == 'true' }}
+        run: |
+          {
+            echo "## Intent change — ${{ github.repository }}"
+            echo
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| change | $KIND |"
+            echo "| check | ${CHECK:+$CHECK_OUTCOME}${CHECK:-none configured} |"
+            echo "| credential | $PRESENT |"
+            if [ "$DISPATCHED" = "true" ]; then echo "| rebuild | dispatched — see the pull request |"; else echo "| rebuild | not dispatched |"; fi
+            echo
+            if [ -s intent-change.stat ]; then echo '```'; cat intent-change.stat; echo '```'; fi
+          } >> "$GITHUB_STEP_SUMMARY"
