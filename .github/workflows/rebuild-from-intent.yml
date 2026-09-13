@@ -1,7 +1,8 @@
 name: Rebuild from intent
 
 # Reusable workflow for a repo whose intent/ is the specification and whose
-# implementation is written from it. A caller runs it when intent/ changes:
+# implementation is written from it. The caller is content-agnostic and can be
+# copied between repositories verbatim:
 #
 #   on:
 #     push:
@@ -11,22 +12,21 @@ name: Rebuild from intent
 #   jobs:
 #     rebuild:
 #       uses: letrud/harness/.github/workflows/rebuild-from-intent.yml@v1
-#       with:
-#         toolchain: go
-#         check: go vet ./... && go test ./...
-#         instructions: |
-#           anything the intent leaves to the implementer that this repo has decided
-#       secrets:
-#         claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}   # or anthropic_api_key
+#       secrets: inherit
+#
+# Everything the agent needs to know — language, layout, distribution, how the
+# implementation proves itself — is read from the Markdown under intent/. Where
+# the intent is silent the agent decides and records the decision in the PR.
 #
 # What it does, in order:
 #   1. works out what changed under intent/ (the push range, or "everything" on dispatch)
-#   2. runs the caller's check, if any, to show whether the implementation still holds
+#   2. runs the caller's check, if one is given, to show whether the implementation still holds
 #   3. dispatches Claude Code to bring the implementation into line with the intent
 #      and open a pull request — never merging
 #
-# Without a credential it records the intent change and stops. Nothing here
-# edits intent/: the intent is the contract, and code is downstream of it.
+# Without a credential (CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY) it records
+# the intent change and stops. Nothing here edits intent/: the intent is the
+# contract, and code is downstream of it.
 
 on:
   workflow_call:
@@ -36,28 +36,13 @@ on:
         required: false
         default: "intent"
         type: string
-      toolchain:
-        description: "go | node | python | none — what to set up on the runner."
-        required: false
-        default: "none"
-        type: string
-      toolchain_version:
-        description: "Version for the toolchain setup action. Empty = the action's default."
-        required: false
-        default: ""
-        type: string
       check:
-        description: "Shell command that proves the implementation satisfies the intent (tests, the implementation's own build). Its outcome is shown to Claude."
+        description: "Optional shell command that proves the implementation satisfies the intent. Its outcome is shown to Claude. Usually unnecessary: the intent states how the implementation proves itself."
         required: false
         default: ""
         type: string
       instructions:
-        description: "Repo-specific instructions appended to the prompt: decisions the intent leaves to the implementer, names CI must use, and so on."
-        required: false
-        default: ""
-        type: string
-      allowed_tools:
-        description: "Extra --allowedTools entries, comma-separated (e.g. Bash(go:*),Bash(npm:*))."
+        description: "Optional extra instructions appended to the brief. Prefer stating such things in the intent itself."
         required: false
         default: ""
         type: string
@@ -97,20 +82,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - uses: actions/setup-go@v5
-        if: inputs.toolchain == 'go'
-        with:
-          go-version: ${{ inputs.toolchain_version || 'stable' }}
-          cache: false
-      - uses: actions/setup-node@v4
-        if: inputs.toolchain == 'node'
-        with:
-          node-version: ${{ inputs.toolchain_version || 'lts/*' }}
-      - uses: actions/setup-python@v5
-        if: inputs.toolchain == 'python'
-        with:
-          python-version: ${{ inputs.toolchain_version || '3.x' }}
 
       - name: What changed under the intent
         id: change
@@ -188,6 +159,20 @@ jobs:
             record the decision in the pull request, not in the intent.
           - Honesty over completeness. What could not be verified is said so, in the code's
             own reporting and in the pull request.
+          - The intent may state the language, the layout, the distribution form and how the
+            implementation proves itself. Where it does, obey it. Where it is silent, choose
+            what a careful engineer would and record the choice in the pull request. Do not
+            write the choice into the intent.
+
+          ## Conventions every repository built this way shares
+
+          - The workflow that proves the implementation on every push and pull request is
+            \`.github/workflows/build.yml\`. Releases, if the intent calls for shipped
+            artefacts, are \`.github/workflows/release.yml\` on a \`v*\` tag. Other systems
+            read stage state from these two names.
+          - Do not modify the workflow that dispatched you.
+          - The runner already has Go, Node, Python, Java, .NET and Rust. Install anything
+            else you need in the job, and in \`build.yml\`.
 
           ## What changed
 
@@ -242,6 +227,8 @@ jobs:
           echo "brief: $(wc -l < brief.md) lines"
           { echo "text<<BRIEF_EOF"; cat brief.md; echo "BRIEF_EOF"; } >> "$GITHUB_OUTPUT"
 
+      # Bash is unrestricted: the agent must run whatever toolchain the intent names,
+      # and the runner is ephemeral. The credential it could read is the one it is using.
       - name: Bring the implementation into line with the intent
         if: ${{ inputs.autofix && steps.cred.outputs.present == 'true' }}
         uses: anthropics/claude-code-action@v1
@@ -253,7 +240,7 @@ jobs:
           prompt: ${{ steps.brief.outputs.text }}
           claude_args: |
             ${{ inputs.claude_args }}
-            --allowedTools "Bash(git:*),Bash(gh pr create:*),Bash(gh pr view:*),Bash(ls:*),Bash(cat:*),Bash(find:*),Bash(mkdir:*),Bash(chmod:*),Edit,Write,Read,Glob,Grep,MultiEdit${{ inputs.allowed_tools != '' && format(',{0}', inputs.allowed_tools) || '' }}"
+            --allowedTools "Bash,Edit,Write,Read,Glob,Grep,MultiEdit"
 
       - name: Summary
         if: always()

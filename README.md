@@ -33,7 +33,7 @@ The workflow validates the intent, checks whether the fleet repo's data and coll
 
 ## Using it from a product repo
 
-For a repository whose `intent/` is the specification and whose code is written from it:
+For a repository whose `intent/` is the specification and whose code is written from it. The caller knows nothing about the repository and is copied between repos verbatim:
 
 ```yaml
 on:
@@ -41,19 +41,17 @@ on:
     branches: [main]
     paths: ["intent/**"]
   workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
 jobs:
   rebuild:
     uses: letrud/harness/.github/workflows/rebuild-from-intent.yml@v1
-    with:
-      toolchain: go
-      check: go vet ./... && go test ./...
-      instructions: |
-        decisions the intent leaves to the implementer that this repo has made
-    secrets:
-      claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+    secrets: inherit
 ```
 
-On every change under `intent/` it hands Claude the diff, the outcome of your check, and your instructions, and Claude opens a pull request bringing the implementation into line. Without a credential it records the change and stops.
+On every change under `intent/` Claude is handed the diff and reads the intent's Markdown for everything else — language, layout, distribution, how the implementation proves itself — deciding and recording in the PR where the intent is silent. Two conventions are the harness's, not the repo's: `build.yml` proves the implementation on every push and PR, `release.yml` ships on a `v*` tag. Without a credential the workflow records the change and stops.
 
 ## Using it locally
 

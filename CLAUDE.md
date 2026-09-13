@@ -41,3 +41,5 @@ A new example must come from a genuinely different domain. The examples exist to
 ## Two kinds of intent, two workflows
 
 A *fleet* intent (`on-intent-change.yml`) describes many units held against a standard; the data file is the implementation, and Claude is dispatched only when the contract breaks mechanically. A *product* intent (`rebuild-from-intent.yml`) is a specification under `intent/` from which source code is written; every change to it is a reason to reconcile the implementation, so Claude is dispatched on each change, with the diff. Both never edit the intent, both open pull requests, both run report-only without a credential.
+
+The product caller is deliberately content-free so it can be copied between repositories unchanged: what the agent needs to know is in the intent, and what every such repo must share (the CI file names other systems read) is stated once, in the brief this workflow composes.
