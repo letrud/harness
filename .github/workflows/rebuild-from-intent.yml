@@ -8,6 +8,7 @@ name: Rebuild from intent
 #     push:
 #       branches: [main]
 #       paths: ["intent/**"]
+#     pull_request:                                 # the intent-boundary guard
 #     workflow_dispatch:
 #       inputs:
 #         before: { type: string, default: "" }   # set by the push hand-off
@@ -30,6 +31,8 @@ name: Rebuild from intent
 # the intent is silent the agent decides and records the decision in the PR.
 #
 # What it does, in order:
+#   -. on a pull request: the guard — a change is to the intent or to the implementation,
+#      never both, and never to files the automation owns — and nothing else
 #   0. a push cannot run the agent (claude-code-action accepts dispatch, schedule and
 #      PR/issue events, not push), so a push hands off: it re-dispatches the caller's
 #      own workflow with the push's before/after commits and stops
@@ -53,6 +56,11 @@ on:
         type: string
       after:
         description: "Commit after the intent change. Set by the push hand-off."
+        required: false
+        default: ""
+        type: string
+      derived_paths:
+        description: "Comma-separated paths the automation on the default branch owns (evidence, generated data, rendered output). A pull request that touches them is refused."
         required: false
         default: ""
         type: string
@@ -101,6 +109,42 @@ permissions:
   actions: write
 
 jobs:
+  # On a pull request: a change is to the intent or to the implementation, never
+  # both; and it never touches what the automation owns. Enforced here, once,
+  # so no repository's own CI has to.
+  guard:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: A change is to the intent or to the implementation, not both
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          INTENT: ${{ inputs.intent_dir }}
+          DERIVED: ${{ inputs.derived_paths }}
+        run: |
+          changed=$(git diff --name-only "$BASE...HEAD")
+          intent=$(echo "$changed" | grep "^$INTENT/" || true)
+          impl=$(echo "$changed" | grep -v "^$INTENT/" || true)
+          derived=""
+          IFS=',' read -ra paths <<< "$DERIVED"
+          for d in "${paths[@]}"; do d="${d## }"; d="${d%% }"; [ -z "$d" ] && continue; derived+=$(echo "$changed" | grep "^${d%/}/" || true); derived+=$'
+'; done
+          derived=$(echo "$derived" | sed '/^$/d')
+          fail=0
+          if [ -n "$derived" ]; then
+            echo "::error::this change touches files the automation on the default branch owns. Regenerate there; never carry them in a pull request."
+            echo "$derived" | sed 's/^/  /'; fail=1
+          fi
+          if [ -n "$intent" ] && [ -n "$impl" ]; then
+            echo "::error::this change modifies $INTENT/ and the implementation together. Split it."
+            echo "$INTENT/:"; echo "$intent" | sed 's/^/  /'; echo "implementation:"; echo "$impl" | sed 's/^/  /'; fail=1
+          fi
+          [ "$fail" = 1 ] && exit 1
+          echo "ok: $( [ -n "$intent" ] && echo 'intent change' || echo 'implementation change' )"
+
   # A push re-dispatches the caller's own workflow, carrying the push range.
   handoff:
     if: github.event_name == 'push'
@@ -119,7 +163,7 @@ jobs:
           gh workflow run "$file" --repo "$GITHUB_REPOSITORY" --ref "$REF" -f before="$BEFORE" -f after="$AFTER"
 
   rebuild:
-    if: github.event_name != 'push'
+    if: github.event_name != 'push' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -245,9 +289,9 @@ jobs:
             \`.github/workflows/build.yml\`. Releases, if the intent calls for shipped
             artefacts, are \`.github/workflows/release.yml\` on a \`v*\` tag. Other systems
             read stage state from these two names.
-          - A change is to the intent or to the implementation, never both. \`build.yml\` MUST
-            refuse a pull request that modifies \`$INTENT/\` together with anything outside it.
-            Your pull request modifies nothing under \`$INTENT/\` — the automation on the default
+          - A change is to the intent or to the implementation, never both; the harness refuses a
+            mixed pull request, so \`build.yml\` need not. Your pull request modifies nothing under
+            \`$INTENT/\` — the automation on the default
             branch writes whatever the intent declares as generated (evidence, generated docs)
             after your change is accepted. Run the proofs, state their result per instance and
             per operation in the pull request, and discard the files they regenerate.

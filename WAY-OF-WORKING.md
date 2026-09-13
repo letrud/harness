@@ -13,7 +13,7 @@ How repositories built on this harness are changed, proven, accepted and release
 - **An intent change** is deliberate, has its own pull request or commit, and touches only `intent/`. It says what changed and why in one sentence. Every intent change on the default branch dispatches the agent with the diff.
 - **An implementation change** touches nothing under `intent/` — not the specification, not the packs or data, not the generated files. It states what it did and what it could not verify.
 
-CI refuses a pull request that does both. Two writers own `intent/`: people, for the specification and the declared data; the automation on the default branch, for whatever the intent declares as generated — evidence, generated docs, collected data. A pull request is neither writer.
+The harness refuses a pull request that does both, and one that touches files the automation owns. Two writers own `intent/`: people, for the specification and the declared data; the automation on the default branch, for whatever the intent declares as generated — evidence, generated docs, collected data. A pull request is neither writer.
 
 Something learned while implementing that belongs in the intent — a counterparty's quirk, a source's mapping, a limitation — is proposed as its own intent change and named in the implementation change that depends on it.
 
