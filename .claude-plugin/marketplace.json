@@ -1,0 +1,13 @@
+{
+  "name": "fleet-harness",
+  "owner": {
+    "name": "Let's Consult"
+  },
+  "plugins": [
+    {
+      "name": "fleet-control",
+      "source": "./plugins/fleet-control",
+      "description": "Capture the intent of any fleet held against a standard, then scaffold, audit and render it."
+    }
+  ]
+}

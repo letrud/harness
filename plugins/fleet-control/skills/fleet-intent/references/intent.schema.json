@@ -1,0 +1,951 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Fleet intent spec",
+  "description": "Declares what a fleet is, what it is judged on, and how it is surfaced. Domain-neutral: the renderer needs nothing else.",
+  "type": "object",
+  "required": [
+    "spec",
+    "unit",
+    "dimensions",
+    "views"
+  ],
+  "properties": {
+    "spec": {
+      "const": 1
+    },
+    "title": {
+      "type": "string",
+      "description": "Page title and artifact name."
+    },
+    "eyebrow": {
+      "type": "string",
+      "description": "Default breadcrumb above the view title."
+    },
+    "brandIcon": {
+      "$ref": "#/$defs/icon"
+    },
+    "liveLabel": {
+      "type": "string",
+      "description": "Text in the status chip, e.g. 'Control plane live'."
+    },
+    "syncLabel": {
+      "type": "string",
+      "description": "Text after the clock, e.g. 'synced'."
+    },
+    "unit": {
+      "type": "object",
+      "description": "One member of the fleet.",
+      "required": [
+        "id",
+        "label"
+      ],
+      "properties": {
+        "singular": {
+          "type": "string"
+        },
+        "plural": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string",
+          "description": "Field that uniquely identifies an instance."
+        },
+        "label": {
+          "type": "string",
+          "description": "Field shown as the name."
+        },
+        "subtitle": {
+          "type": "string",
+          "description": "Field shown under the name, rendered mono."
+        },
+        "search": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Fields the search box matches."
+        },
+        "searchPlaceholder": {
+          "type": "string"
+        },
+        "accent": {
+          "type": "object",
+          "description": "Colour dot beside the name, e.g. language or category.",
+          "properties": {
+            "field": {
+              "type": "string"
+            },
+            "palette": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "group": {
+          "type": "object",
+          "properties": {
+            "field": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            }
+          },
+          "description": "Owning team/function chip."
+        },
+        "class": {
+          "type": "object",
+          "description": "Criticality or tier badge.",
+          "properties": {
+            "field": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "prefix": {
+              "type": "string"
+            },
+            "ranks": {
+              "type": "object",
+              "additionalProperties": {
+                "enum": [
+                  "crit",
+                  "warn",
+                  "idle"
+                ]
+              },
+              "description": "Class value -> badge tone."
+            }
+          }
+        }
+      }
+    },
+    "states": {
+      "type": "object",
+      "description": "The domain's own state words mapped to render roles. absent is NOT ok - 'never configured' must never look like 'passing'.",
+      "additionalProperties": {
+        "enum": [
+          "ok",
+          "warn",
+          "crit",
+          "active",
+          "absent"
+        ]
+      }
+    },
+    "severityLabels": {
+      "type": "object",
+      "description": "Human words for the three severities, e.g. healthy / needs attention / blocked.",
+      "properties": {
+        "ok": {
+          "type": "string"
+        },
+        "warn": {
+          "type": "string"
+        },
+        "crit": {
+          "type": "string"
+        }
+      }
+    },
+    "slots": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Ordered positions a unit can occupy for a matrix dimension - environments, markets, regions. Order matters: 'last' is the default reference."
+    },
+    "dimensions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "description": "Two to four is the useful range. Each answers one question about a unit.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "render"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "card": {
+            "type": "boolean",
+            "default": true,
+            "description": "false to keep the dimension out of the card but still in the drawer."
+          },
+          "summary": {
+            "type": "object",
+            "description": "The value shown beside the band label.",
+            "properties": {
+              "field": {
+                "type": "string"
+              },
+              "suffix": {
+                "type": "string"
+              },
+              "template": {
+                "type": "string",
+                "description": "e.g. '{rating} · {debt} debt'"
+              },
+              "derived": {
+                "enum": [
+                  "matrix"
+                ],
+                "description": "matrix: 'all in sync' / 'N versions live' / 'N behind <reference>'"
+              }
+            }
+          },
+          "render": {
+            "$ref": "#/$defs/render"
+          },
+          "details": {
+            "type": "array",
+            "description": "Key/value rows in this dimension's drawer tab.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "field": {
+                  "type": "string"
+                },
+                "suffix": {
+                  "type": "string"
+                },
+                "mono": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "trend": {
+            "type": "object",
+            "properties": {
+              "field": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "description": "Series drawn large in the drawer tab."
+          }
+        }
+      }
+    },
+    "severity": {
+      "type": "array",
+      "description": "Evaluated in order; first match wins; default is ok. Keep conservative - if most units are amber the rule is wrong.",
+      "items": {
+        "type": "object",
+        "required": [
+          "role",
+          "when"
+        ],
+        "properties": {
+          "role": {
+            "enum": [
+              "crit",
+              "warn"
+            ]
+          },
+          "when": {
+            "$ref": "#/$defs/predicate"
+          }
+        }
+      }
+    },
+    "card": {
+      "type": "object",
+      "properties": {
+        "footer": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "field": {
+                "type": "string"
+              },
+              "suffix": {
+                "type": "string",
+                "description": "Unit appended to the value, e.g. '%' or 'h'."
+              }
+            }
+          }
+        },
+        "trend": {
+          "type": "string",
+          "description": "Field holding a numeric series for the card sparkline."
+        }
+      }
+    },
+    "band": {
+      "type": "array",
+      "description": "Summary strip across the top of the overview.",
+      "items": {
+        "type": "object",
+        "required": [
+          "label",
+          "agg"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "agg": {
+            "enum": [
+              "count",
+              "avg",
+              "sum",
+              "countWhere",
+              "conformance"
+            ]
+          },
+          "field": {
+            "type": "string"
+          },
+          "when": {
+            "$ref": "#/$defs/predicate"
+          },
+          "of": {
+            "const": "total",
+            "description": "Render as n/total."
+          },
+          "suffix": {
+            "type": "string"
+          },
+          "precision": {
+            "type": "integer"
+          },
+          "sub": {
+            "type": "string",
+            "description": "Caption under the figure."
+          },
+          "breakdown": {
+            "const": "severity",
+            "description": "Render the severity split as a stacked bar."
+          },
+          "trend": {
+            "type": "string",
+            "description": "Field to sum across units into one sparkline."
+          },
+          "tone": {
+            "const": "inverse",
+            "description": "Zero is good: green at 0, amber above."
+          }
+        }
+      }
+    },
+    "filters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "label"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "when": {
+            "$ref": "#/$defs/predicate"
+          }
+        }
+      },
+      "description": "First entry should have no 'when' - it is the All chip."
+    },
+    "sorts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "label"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "dir": {
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "by": {
+            "const": "severity"
+          },
+          "then": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "legend": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "swatch": {
+            "enum": [
+              "ok",
+              "warn",
+              "crit",
+              "active",
+              "absent"
+            ]
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "views": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "icon",
+          "label",
+          "title"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "cards",
+              "table",
+              "matrix",
+              "static",
+              "conformance"
+            ]
+          },
+          "icon": {
+            "$ref": "#/$defs/icon"
+          },
+          "label": {
+            "type": "string",
+            "description": "Rail tooltip."
+          },
+          "title": {
+            "type": "string"
+          },
+          "crumb": {
+            "type": "string"
+          },
+          "panel": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "band": {
+            "type": "boolean",
+            "description": "Show the summary band on this view."
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/column"
+            }
+          },
+          "trailing": {
+            "$ref": "#/$defs/column"
+          },
+          "panels": {
+            "type": "array",
+            "description": "static views only: rows that are not fleet instances.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "note": {
+                  "type": "string"
+                },
+                "columns": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/column"
+                  }
+                },
+                "rows": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "standard": {
+      "type": "object",
+      "description": "The declared baseline. Drives both the audit and the conformance view - one declaration, so the CI gate and the page cannot disagree.",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "requirements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "label",
+              "classes"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "short": {
+                "type": "string",
+                "description": "Column header in the conformance view, ~5 chars."
+              },
+              "label": {
+                "type": "string",
+                "description": "What must be true, stated positively."
+              },
+              "dimension": {
+                "type": "string",
+                "description": "Dimension id this requirement belongs to."
+              },
+              "remedy": {
+                "type": "string",
+                "description": "The action to take. Write the action, not a restatement of the gap."
+              },
+              "classes": {
+                "type": "object",
+                "description": "Keyed by unit.class value, or '*' for all classes. A class with no entry means the requirement does not apply to it - rendered as '·', never as a pass.",
+                "additionalProperties": {
+                  "type": "object",
+                  "required": [
+                    "level",
+                    "when"
+                  ],
+                  "properties": {
+                    "level": {
+                      "enum": [
+                        "required",
+                        "advisory"
+                      ]
+                    },
+                    "when": {
+                      "$ref": "#/$defs/predicate"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "icon": {
+      "enum": [
+        "box",
+        "chart",
+        "factory",
+        "flag",
+        "flow",
+        "gear",
+        "grid",
+        "layers",
+        "link",
+        "list",
+        "shield",
+        "users"
+      ]
+    },
+    "render": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "oneOf": [
+        {
+          "properties": {
+            "type": {
+              "const": "sequence"
+            },
+            "field": {
+              "type": "string",
+              "description": "Object of step key -> state."
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "key"
+                ],
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "short": {
+                    "type": "string",
+                    "description": "3-char chip label."
+                  },
+                  "label": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "stateNotes": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "State -> sentence used in the drawer timeline."
+            }
+          },
+          "required": [
+            "type",
+            "field",
+            "steps"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "gauge"
+            },
+            "verdict": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "labels": {
+                  "type": "object"
+                },
+                "roles": {
+                  "type": "object"
+                }
+              }
+            },
+            "value": {
+              "type": "object",
+              "required": [
+                "field"
+              ],
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "suffix": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "number",
+                  "description": "Draws the tick; also sets the bar's colour thresholds."
+                }
+              }
+            },
+            "counters": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "field": {
+                    "type": "string"
+                  },
+                  "suffix": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "enum": [
+                      "crit",
+                      "warn"
+                    ]
+                  },
+                  "label": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "matrix"
+            },
+            "value": {
+              "type": "string",
+              "description": "Field holding slot -> value."
+            },
+            "state": {
+              "type": "string",
+              "description": "Field holding slot -> state."
+            },
+            "reference": {
+              "type": "string",
+              "description": "Slot everything is compared against. 'last' (default) or a slot name."
+            },
+            "compare": {
+              "enum": [
+                "semver",
+                "number",
+                "string"
+              ],
+              "default": "semver"
+            },
+            "drift": {
+              "type": "object",
+              "properties": {
+                "distinctOver": {
+                  "type": "integer",
+                  "default": 2
+                },
+                "staleAny": {
+                  "type": "boolean",
+                  "default": true
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "value",
+            "state"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "facts"
+            },
+            "facts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "label",
+                  "field"
+                ],
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "field": {
+                    "type": "string"
+                  },
+                  "as": {
+                    "const": "bool"
+                  },
+                  "yes": {
+                    "type": "string"
+                  },
+                  "no": {
+                    "type": "string"
+                  },
+                  "prefix": {
+                    "type": "string"
+                  },
+                  "suffix": {
+                    "type": "string"
+                  },
+                  "good": {
+                    "type": "number"
+                  },
+                  "warn": {
+                    "type": "number"
+                  },
+                  "max": {
+                    "type": "number"
+                  },
+                  "warnMax": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "facts"
+          ]
+        }
+      ]
+    },
+    "column": {
+      "type": "object",
+      "required": [
+        "label"
+      ],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "field": {
+          "type": "string"
+        },
+        "sub": {
+          "type": "string",
+          "description": "Second line under a name cell."
+        },
+        "as": {
+          "enum": [
+            "mono",
+            "num",
+            "verdict",
+            "state",
+            "bool",
+            "level",
+            "rating",
+            "meter",
+            "counters",
+            "sequence",
+            "trend",
+            "muted"
+          ]
+        },
+        "suffix": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": "string"
+        },
+        "target": {
+          "type": "number"
+        },
+        "good": {
+          "type": "number"
+        },
+        "warn": {
+          "type": "number"
+        },
+        "yes": {
+          "type": "string"
+        },
+        "no": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object"
+        },
+        "roles": {
+          "type": "object"
+        },
+        "counters": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "dimension": {
+          "type": "string",
+          "description": "For as:sequence - which dimension to draw."
+        },
+        "width": {
+          "type": "integer"
+        }
+      }
+    },
+    "predicate": {
+      "type": "object",
+      "description": "Structured, safe to author. Combinators all/any/not; operators eq ne gt gte lt lte in truthy; anyOf/everyOf test an object's values; flag tests a built-in (drifted, stale); severity tests the computed severity.",
+      "properties": {
+        "all": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/predicate"
+          }
+        },
+        "any": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/predicate"
+          }
+        },
+        "not": {
+          "$ref": "#/$defs/predicate"
+        },
+        "field": {
+          "type": "string"
+        },
+        "anyOf": {
+          "type": "string"
+        },
+        "everyOf": {
+          "type": "string"
+        },
+        "flag": {
+          "enum": [
+            "drifted",
+            "stale",
+            "nonconformant"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "ok",
+            "warn",
+            "crit"
+          ]
+        },
+        "eq": {},
+        "ne": {},
+        "gt": {},
+        "gte": {},
+        "lt": {},
+        "lte": {},
+        "in": {
+          "type": "array"
+        },
+        "truthy": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,308 @@
+{
+  "items": [
+    {
+      "name": "Nordkraft Energi",
+      "category": "Energy supply",
+      "owner": "Facilities",
+      "tier": 1,
+      "steps": {
+        "screen": "ok",
+        "contract": "ok",
+        "dpa": "ok",
+        "security": "ok",
+        "insurance": "ok",
+        "approval": "ok"
+      },
+      "control": 94,
+      "audit": "clean",
+      "findings": {
+        "c": 0,
+        "h": 0
+      },
+      "market": {
+        "EU": "2026.1",
+        "UK": "2026.1",
+        "US": "2026.1",
+        "APAC": "2026.1"
+      },
+      "marketState": {
+        "EU": "ok",
+        "UK": "ok",
+        "US": "ok",
+        "APAC": "ok"
+      },
+      "iso27001": true,
+      "soc2": true,
+      "renewal": "2027-04-30",
+      "spend": 4.2,
+      "lastReview": "11 days ago",
+      "onboard": 100
+    },
+    {
+      "name": "Bergen Logistikk",
+      "category": "Freight",
+      "owner": "Operations",
+      "tier": 1,
+      "steps": {
+        "screen": "ok",
+        "contract": "ok",
+        "dpa": "ok",
+        "security": "warn",
+        "insurance": "ok",
+        "approval": "ok"
+      },
+      "control": 81,
+      "audit": "findings",
+      "findings": {
+        "c": 0,
+        "h": 2
+      },
+      "market": {
+        "EU": "2026.1",
+        "UK": "2025.4",
+        "US": "2025.4",
+        "APAC": null
+      },
+      "marketState": {
+        "EU": "ok",
+        "UK": "warn",
+        "US": "ok",
+        "APAC": "none"
+      },
+      "iso27001": true,
+      "soc2": false,
+      "renewal": "2026-11-15",
+      "spend": 7.8,
+      "lastReview": "1 month ago",
+      "onboard": 93
+    },
+    {
+      "name": "Cloudhaven AS",
+      "category": "Cloud hosting",
+      "owner": "Technology",
+      "tier": 1,
+      "steps": {
+        "screen": "ok",
+        "contract": "ok",
+        "dpa": "ok",
+        "security": "ok",
+        "insurance": "ok",
+        "approval": "ok"
+      },
+      "control": 97,
+      "audit": "clean",
+      "findings": {
+        "c": 0,
+        "h": 0
+      },
+      "market": {
+        "EU": "2026.2",
+        "UK": "2026.2",
+        "US": "2026.2",
+        "APAC": "2026.2"
+      },
+      "marketState": {
+        "EU": "ok",
+        "UK": "ok",
+        "US": "ok",
+        "APAC": "ok"
+      },
+      "iso27001": true,
+      "soc2": true,
+      "renewal": "2027-09-01",
+      "spend": 12.4,
+      "lastReview": "6 days ago",
+      "onboard": 100
+    },
+    {
+      "name": "Vestland Rekruttering",
+      "category": "Staffing",
+      "owner": "People",
+      "tier": 2,
+      "steps": {
+        "screen": "ok",
+        "contract": "ok",
+        "dpa": "warn",
+        "security": "idle",
+        "insurance": "ok",
+        "approval": "run"
+      },
+      "control": 58,
+      "audit": "findings",
+      "findings": {
+        "c": 0,
+        "h": 1
+      },
+      "market": {
+        "EU": "2025.4",
+        "UK": "2025.4",
+        "US": null,
+        "APAC": null
+      },
+      "marketState": {
+        "EU": "ok",
+        "UK": "ok",
+        "US": "none",
+        "APAC": "none"
+      },
+      "iso27001": false,
+      "soc2": false,
+      "renewal": "2026-10-02",
+      "spend": 1.9,
+      "lastReview": "3 months ago",
+      "onboard": 77
+    },
+    {
+      "name": "Meridian Payments",
+      "category": "Payment processing",
+      "owner": "Finance",
+      "tier": 1,
+      "steps": {
+        "screen": "ok",
+        "contract": "ok",
+        "dpa": "ok",
+        "security": "crit",
+        "insurance": "ok",
+        "approval": "ok"
+      },
+      "control": 72,
+      "audit": "overdue",
+      "findings": {
+        "c": 1,
+        "h": 3
+      },
+      "market": {
+        "EU": "2026.1",
+        "UK": "2026.1",
+        "US": "2025.3",
+        "APAC": "2025.3"
+      },
+      "marketState": {
+        "EU": "ok",
+        "UK": "ok",
+        "US": "crit",
+        "APAC": "warn"
+      },
+      "iso27001": true,
+      "soc2": true,
+      "renewal": "2026-09-20",
+      "spend": 9.1,
+      "lastReview": "2 weeks ago",
+      "onboard": 90
+    },
+    {
+      "name": "Fjord Kontorservice",
+      "category": "Facilities mgmt",
+      "owner": "Facilities",
+      "tier": 3,
+      "steps": {
+        "screen": "ok",
+        "contract": "ok",
+        "dpa": "ok",
+        "security": "idle",
+        "insurance": "warn",
+        "approval": "ok"
+      },
+      "control": 64,
+      "audit": "clean",
+      "findings": {
+        "c": 0,
+        "h": 0
+      },
+      "market": {
+        "EU": "2026.1",
+        "UK": null,
+        "US": null,
+        "APAC": null
+      },
+      "marketState": {
+        "EU": "ok",
+        "UK": "none",
+        "US": "none",
+        "APAC": "none"
+      },
+      "iso27001": false,
+      "soc2": false,
+      "renewal": "2026-12-12",
+      "spend": 0.6,
+      "lastReview": "5 weeks ago",
+      "onboard": 77
+    },
+    {
+      "name": "Atlas Data Labs",
+      "category": "Analytics",
+      "owner": "Technology",
+      "tier": 2,
+      "steps": {
+        "screen": "ok",
+        "contract": "ok",
+        "dpa": "ok",
+        "security": "ok",
+        "insurance": "ok",
+        "approval": "ok"
+      },
+      "control": 88,
+      "audit": "clean",
+      "findings": {
+        "c": 0,
+        "h": 1
+      },
+      "market": {
+        "EU": "2026.2",
+        "UK": "2026.2",
+        "US": "2026.1",
+        "APAC": "2026.1"
+      },
+      "marketState": {
+        "EU": "ok",
+        "UK": "ok",
+        "US": "ok",
+        "APAC": "ok"
+      },
+      "iso27001": true,
+      "soc2": true,
+      "renewal": "2027-02-28",
+      "spend": 3.3,
+      "lastReview": "9 days ago",
+      "onboard": 100
+    },
+    {
+      "name": "Solvik Trykkeri",
+      "category": "Print & mail",
+      "owner": "Marketing",
+      "tier": 3,
+      "steps": {
+        "screen": "ok",
+        "contract": "warn",
+        "dpa": "idle",
+        "security": "idle",
+        "insurance": "idle",
+        "approval": "idle"
+      },
+      "control": 22,
+      "audit": "overdue",
+      "findings": {
+        "c": 0,
+        "h": 4
+      },
+      "market": {
+        "EU": "2023.2",
+        "UK": null,
+        "US": null,
+        "APAC": null
+      },
+      "marketState": {
+        "EU": "warn",
+        "UK": "none",
+        "US": "none",
+        "APAC": "none"
+      },
+      "iso27001": false,
+      "soc2": false,
+      "renewal": "2026-06-01",
+      "spend": 0.4,
+      "lastReview": "14 months ago",
+      "onboard": 27
+    }
+  ]
+}

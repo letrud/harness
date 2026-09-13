@@ -1,0 +1,204 @@
+name: Fleet intent change
+
+# Reusable workflow. A fleet repo calls it when its intent changes:
+#
+#   jobs:
+#     intent:
+#       uses: letrud/harness/.github/workflows/on-intent-change.yml@v1
+#       with:
+#         fleet: software-factory
+#       secrets:
+#         anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+#
+# What it does, in order:
+#   1. validates the intent against the schema
+#   2. checks the data file still satisfies the contract
+#   3. runs the deterministic audit
+#   4. if the contract broke, dispatches Claude Code to update the repo's
+#      local implementation to match the new intent
+#   5. regenerates the control room and commits it
+
+on:
+  workflow_call:
+    inputs:
+      fleet:
+        description: "Fleet slug. Expects intent/<fleet>.intent.json and data/<fleet>.data.json."
+        required: true
+        type: string
+      harness_ref:
+        description: "Ref of this harness repo to pin the engine to."
+        required: false
+        default: "main"
+        type: string
+      harness_repo:
+        description: "owner/name of the harness repo."
+        required: false
+        default: "letrud/harness"
+        type: string
+      claude_args:
+        description: "Extra args for the Claude CLI (model, turn limit, tools)."
+        required: false
+        default: "--max-turns 30"
+        type: string
+      autofix:
+        description: "Let Claude update the local implementation. false = report only."
+        required: false
+        default: true
+        type: boolean
+    secrets:
+      anthropic_api_key:
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  intent-change:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the fleet repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check out the harness
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.harness_repo }}
+          ref: ${{ inputs.harness_ref }}
+          path: .harness
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install jsonschema pyyaml
+
+      - name: Validate the intent against the schema
+        run: |
+          python3 - <<'PY'
+          import json, sys, jsonschema, pathlib
+          fleet = "${{ inputs.fleet }}"
+          schema = json.loads(pathlib.Path(".harness/plugins/fleet-control/skills/fleet-intent/references/intent.schema.json").read_text())
+          intent = json.loads(pathlib.Path(f"intent/{fleet}.intent.json").read_text())
+          jsonschema.Draft202012Validator(schema).validate(intent)
+          print(f"intent for {fleet} is valid against the contract schema")
+          PY
+
+      # The contract check is the tripwire: when the intent gains a field, the
+      # data file and the collector no longer satisfy it, and this step fails.
+      - name: Check the data file against the contract
+        id: contract
+        continue-on-error: true
+        run: |
+          python3 .harness/plugins/fleet-control/skills/fleet-scaffold/references/scaffold.py \
+            intent/${{ inputs.fleet }}.intent.json data data/${{ inputs.fleet }}.data.json check \
+            | tee contract.txt
+          grep -q ", 0 incomplete" contract.txt
+
+      - name: Check the collector declares a source for every field
+        id: sources
+        continue-on-error: true
+        run: python3 collector/collect.py --check | tee sources.txt
+
+      - name: Audit against the declared standard
+        id: audit
+        continue-on-error: true
+        run: |
+          python3 .harness/plugins/fleet-control/skills/fleet-audit/references/audit.py \
+            intent/${{ inputs.fleet }}.intent.json data/${{ inputs.fleet }}.data.json \
+            | tee audit.txt
+
+      # Only runs when something the intent requires is missing downstream.
+      # Claude gets the fleet-control skills through the harness marketplace,
+      # so it works from the same rules used to author the intent.
+      - name: Update the local implementation to match the intent
+        if: ${{ inputs.autofix && (steps.contract.outcome == 'failure' || steps.sources.outcome == 'failure') }}
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.anthropic_api_key }}
+          plugin_marketplaces: https://github.com/${{ inputs.harness_repo }}.git
+          plugins: fleet-control@fleet-harness
+          claude_args: ${{ inputs.claude_args }}
+          prompt: |
+            The fleet intent at intent/${{ inputs.fleet }}.intent.json has changed and this
+            repo's local implementation no longer satisfies it. Bring the implementation back
+            into line with the intent. The intent is the source of truth — never edit it to
+            make a check pass.
+
+            Read CLAUDE.md in this repo first: it defines what the local implementation is.
+
+            What is failing:
+
+            Contract check (data file vs intent):
+            ```
+            ${{ steps.contract.outputs.stdout }}
+            ```
+            See contract.txt in the workspace for the full output.
+
+            Source coverage (collector vs intent):
+            see sources.txt in the workspace.
+
+            Do, in this order:
+            1. For every field the intent now requires that the collector has no source for,
+               add an entry to collector/sources.yml. Pick the adapter that genuinely owns
+               that value. If no source exists yet, use `adapter: manual` with
+               `status: todo` and a one-line note — never invent a plausible adapter.
+            2. Add or update the adapter function in collector/collect.py if the new field
+               needs one. Keep adapters small and side-effect free.
+            3. Update data/${{ inputs.fleet }}.data.json so every instance carries the new
+               fields. Use honest values: unknown is null or the intent's absent state,
+               never an optimistic guess. Do not touch values that were already correct.
+            4. Re-run `python3 collector/collect.py --check` and the contract check until
+               both pass.
+
+            Then commit on a branch and open a pull request describing, in plain language:
+            what the intent changed, what you changed to match it, and which values are
+            still unknown and need a real source. Do not merge.
+          use_sticky_comment: true
+
+      - name: Regenerate the control room
+        if: always()
+        run: |
+          python3 .harness/plugins/fleet-control/skills/fleet-surface/references/build.py \
+            intent/${{ inputs.fleet }}.intent.json data/${{ inputs.fleet }}.data.json \
+            site/control-room.html
+
+      - name: Commit the regenerated room
+        if: always()
+        run: |
+          git config user.name  "fleet-harness"
+          git config user.email "fleet-harness@users.noreply.github.com"
+          if ! git diff --quiet -- site/control-room.html; then
+            git add site/control-room.html
+            git commit -m "chore: regenerate control room from intent"
+            git push || echo "push skipped — Claude's branch owns this change"
+          else
+            echo "control room already current"
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Fleet: ${{ inputs.fleet }}"
+            echo ""
+            echo "| check | result |"
+            echo "| --- | --- |"
+            echo "| contract | ${{ steps.contract.outcome }} |"
+            echo "| sources | ${{ steps.sources.outcome }} |"
+            echo "| audit | ${{ steps.audit.outcome }} |"
+            echo ""
+            echo '```'
+            head -40 audit.txt 2>/dev/null || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The audit is advisory on an intent change — raising the standard is
+      # supposed to produce gaps. Gate merges on the contract, not on conformance.
+      - name: Fail if the contract is still broken
+        if: ${{ steps.contract.outcome == 'failure' || steps.sources.outcome == 'failure' }}
+        run: |
+          echo "The implementation does not satisfy the intent. See the PR Claude opened, or fix by hand."
+          exit 1

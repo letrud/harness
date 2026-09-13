@@ -1,0 +1,823 @@
+{
+  "spec": 1,
+  "title": "Supplier Assurance",
+  "eyebrow": "Third-party assurance · Register",
+  "brandIcon": "users",
+  "liveLabel": "Register current",
+  "syncLabel": "last sync",
+  "unit": {
+    "singular": "supplier",
+    "plural": "suppliers",
+    "id": "name",
+    "label": "name",
+    "subtitle": "category",
+    "search": [
+      "name",
+      "category",
+      "owner"
+    ],
+    "searchPlaceholder": "Search supplier, category, owner…",
+    "group": {
+      "field": "owner",
+      "label": "Business owner"
+    },
+    "class": {
+      "field": "tier",
+      "label": "Criticality",
+      "prefix": "T",
+      "ranks": {
+        "1": "crit",
+        "2": "warn",
+        "3": "idle"
+      }
+    }
+  },
+  "states": {
+    "ok": "ok",
+    "warn": "warn",
+    "crit": "crit",
+    "run": "active",
+    "idle": "absent",
+    "none": "absent"
+  },
+  "severityLabels": {
+    "ok": "assured",
+    "warn": "watch",
+    "crit": "escalate"
+  },
+  "slots": [
+    "EU",
+    "UK",
+    "US",
+    "APAC"
+  ],
+  "dimensions": [
+    {
+      "id": "onboarding",
+      "label": "Onboarding",
+      "summary": {
+        "field": "onboard",
+        "suffix": "% complete"
+      },
+      "render": {
+        "type": "sequence",
+        "field": "steps",
+        "steps": [
+          {
+            "key": "screen",
+            "short": "scr",
+            "label": "Screening"
+          },
+          {
+            "key": "contract",
+            "short": "ctr",
+            "label": "Contract"
+          },
+          {
+            "key": "dpa",
+            "short": "dpa",
+            "label": "Data processing agreement"
+          },
+          {
+            "key": "security",
+            "short": "sec",
+            "label": "Security review"
+          },
+          {
+            "key": "insurance",
+            "short": "ins",
+            "label": "Insurance evidence"
+          },
+          {
+            "key": "approval",
+            "short": "apr",
+            "label": "Board approval"
+          }
+        ],
+        "stateNotes": {
+          "ok": "complete",
+          "run": "in review now",
+          "warn": "expired or incomplete",
+          "crit": "failed — escalate",
+          "idle": "not started"
+        }
+      },
+      "details": [
+        {
+          "label": "Onboarding complete",
+          "field": "onboard",
+          "suffix": "%"
+        },
+        {
+          "label": "Business owner",
+          "field": "owner"
+        },
+        {
+          "label": "Annual spend",
+          "field": "spend",
+          "suffix": "M NOK"
+        },
+        {
+          "label": "Last review",
+          "field": "lastReview"
+        }
+      ]
+    },
+    {
+      "id": "assurance",
+      "label": "Assurance",
+      "summary": {
+        "template": "audit {audit}"
+      },
+      "render": {
+        "type": "gauge",
+        "verdict": {
+          "field": "audit",
+          "labels": {
+            "clean": "Audit clean",
+            "findings": "Open findings",
+            "overdue": "Audit overdue"
+          },
+          "roles": {
+            "clean": "ok",
+            "findings": "warn",
+            "overdue": "crit"
+          }
+        },
+        "value": {
+          "field": "control",
+          "label": "control coverage",
+          "suffix": "%",
+          "target": 90
+        },
+        "counters": [
+          {
+            "field": "findings.c",
+            "suffix": "C",
+            "role": "crit",
+            "label": "critical findings"
+          },
+          {
+            "field": "findings.h",
+            "suffix": "H",
+            "role": "warn",
+            "label": "high findings"
+          }
+        ]
+      },
+      "details": [
+        {
+          "label": "Control coverage",
+          "field": "control",
+          "suffix": "%"
+        },
+        {
+          "label": "Audit status",
+          "field": "audit"
+        },
+        {
+          "label": "Critical findings",
+          "field": "findings.c"
+        },
+        {
+          "label": "High findings",
+          "field": "findings.h"
+        }
+      ]
+    },
+    {
+      "id": "markets",
+      "label": "Markets",
+      "summary": {
+        "derived": "matrix"
+      },
+      "render": {
+        "type": "matrix",
+        "value": "market",
+        "state": "marketState",
+        "reference": "EU",
+        "compare": "semver",
+        "drift": {
+          "distinctOver": 1,
+          "staleAny": true
+        }
+      },
+      "details": [
+        {
+          "label": "Category",
+          "field": "category"
+        },
+        {
+          "label": "Criticality tier",
+          "field": "tier"
+        },
+        {
+          "label": "Contract renewal",
+          "field": "renewal",
+          "mono": true
+        }
+      ]
+    },
+    {
+      "id": "certification",
+      "label": "Certification",
+      "card": false,
+      "render": {
+        "type": "facts",
+        "facts": [
+          {
+            "label": "ISO 27001",
+            "field": "iso27001",
+            "as": "bool",
+            "yes": "certified",
+            "no": "none"
+          },
+          {
+            "label": "SOC 2",
+            "field": "soc2",
+            "as": "bool",
+            "yes": "type II",
+            "no": "none"
+          },
+          {
+            "label": "Control coverage",
+            "field": "control",
+            "suffix": "%",
+            "good": 90,
+            "warn": 70
+          }
+        ]
+      },
+      "details": [
+        {
+          "label": "Contract renewal",
+          "field": "renewal",
+          "mono": true
+        },
+        {
+          "label": "Annual spend",
+          "field": "spend",
+          "suffix": "M NOK"
+        }
+      ]
+    }
+  ],
+  "severity": [
+    {
+      "role": "crit",
+      "when": {
+        "any": [
+          {
+            "field": "audit",
+            "eq": "overdue"
+          },
+          {
+            "field": "findings.c",
+            "gt": 0
+          },
+          {
+            "anyOf": "steps",
+            "eq": "crit"
+          }
+        ]
+      }
+    },
+    {
+      "role": "warn",
+      "when": {
+        "any": [
+          {
+            "field": "audit",
+            "eq": "findings"
+          },
+          {
+            "field": "findings.h",
+            "gt": 0
+          },
+          {
+            "anyOf": "steps",
+            "eq": "warn"
+          },
+          {
+            "flag": "drifted"
+          }
+        ]
+      }
+    }
+  ],
+  "card": {
+    "footer": [
+      {
+        "label": "last review",
+        "field": "lastReview"
+      },
+      {
+        "label": "renewal",
+        "field": "renewal"
+      }
+    ]
+  },
+  "band": [
+    {
+      "label": "Suppliers",
+      "agg": "count",
+      "breakdown": "severity"
+    },
+    {
+      "label": "Onboarding",
+      "agg": "avg",
+      "field": "onboard",
+      "suffix": "%",
+      "sub": "of the standard completed across the register"
+    },
+    {
+      "label": "Policy met",
+      "agg": "conformance",
+      "suffix": "%",
+      "sub": "of applicable requirements across the register"
+    },
+    {
+      "label": "Audits clean",
+      "agg": "countWhere",
+      "when": {
+        "field": "audit",
+        "eq": "clean"
+      },
+      "of": "total",
+      "sub": "no open findings at last audit"
+    },
+    {
+      "label": "Contract drift",
+      "agg": "countWhere",
+      "when": {
+        "flag": "drifted"
+      },
+      "tone": "inverse",
+      "sub": "markets not on the EU master terms"
+    },
+    {
+      "label": "Annual spend",
+      "agg": "sum",
+      "field": "spend",
+      "suffix": "M NOK",
+      "sub": "committed across the register"
+    }
+  ],
+  "filters": [
+    {
+      "id": "all",
+      "label": "All"
+    },
+    {
+      "id": "attention",
+      "label": "Needs attention",
+      "when": {
+        "not": {
+          "severity": "ok"
+        }
+      }
+    },
+    {
+      "id": "assured",
+      "label": "Fully assured",
+      "when": {
+        "all": [
+          {
+            "field": "onboard",
+            "gte": 100
+          },
+          {
+            "field": "audit",
+            "eq": "clean"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tier1",
+      "label": "Critical suppliers",
+      "when": {
+        "field": "tier",
+        "eq": 1
+      }
+    }
+  ],
+  "sorts": [
+    {
+      "id": "risk",
+      "label": "risk first",
+      "by": "severity",
+      "then": "onboard"
+    },
+    {
+      "id": "name",
+      "label": "name",
+      "field": "name"
+    },
+    {
+      "id": "spend",
+      "label": "spend",
+      "field": "spend",
+      "dir": "desc"
+    },
+    {
+      "id": "control",
+      "label": "control coverage",
+      "field": "control",
+      "dir": "desc"
+    },
+    {
+      "id": "renewal",
+      "label": "renewal date",
+      "field": "renewal"
+    }
+  ],
+  "legend": [
+    {
+      "swatch": "ok",
+      "label": "assured"
+    },
+    {
+      "swatch": "warn",
+      "label": "watch"
+    },
+    {
+      "swatch": "crit",
+      "label": "escalate"
+    },
+    {
+      "swatch": "active",
+      "label": "in review now"
+    },
+    {
+      "label": "⚠ market behind the EU master terms"
+    }
+  ],
+  "views": [
+    {
+      "id": "register",
+      "type": "cards",
+      "icon": "users",
+      "label": "Register",
+      "title": "Supplier register",
+      "crumb": "Third-party assurance · Register"
+    },
+    {
+      "id": "onboarding",
+      "type": "table",
+      "icon": "list",
+      "label": "Onboarding",
+      "title": "Onboarding progress",
+      "crumb": "Third-party assurance · Intake",
+      "panel": "Onboarding progress",
+      "note": "Where each supplier stands against the six intake steps.",
+      "columns": [
+        {
+          "label": "Supplier",
+          "field": "name",
+          "sub": "category"
+        },
+        {
+          "label": "Steps",
+          "as": "sequence",
+          "dimension": "onboarding",
+          "width": 220
+        },
+        {
+          "label": "Complete",
+          "field": "onboard",
+          "as": "num",
+          "suffix": "%"
+        },
+        {
+          "label": "Owner",
+          "field": "owner",
+          "as": "muted"
+        },
+        {
+          "label": "Last review",
+          "field": "lastReview",
+          "as": "muted"
+        }
+      ]
+    },
+    {
+      "id": "assurance",
+      "type": "table",
+      "icon": "shield",
+      "label": "Assurance",
+      "title": "Control assurance",
+      "crumb": "Third-party assurance · Controls",
+      "panel": "Control assurance",
+      "note": "Coverage target is 90% — the tick on each bar.",
+      "columns": [
+        {
+          "label": "Supplier",
+          "field": "name",
+          "sub": "owner"
+        },
+        {
+          "label": "Audit",
+          "field": "audit",
+          "as": "verdict",
+          "labels": {
+            "clean": "clean",
+            "findings": "findings",
+            "overdue": "overdue"
+          },
+          "roles": {
+            "clean": "ok",
+            "findings": "warn",
+            "overdue": "crit"
+          }
+        },
+        {
+          "label": "Control coverage",
+          "field": "control",
+          "as": "meter",
+          "target": 90,
+          "suffix": "%",
+          "width": 150
+        },
+        {
+          "label": "Open findings",
+          "as": "counters",
+          "counters": [
+            {
+              "field": "findings.c",
+              "suffix": "C",
+              "role": "crit"
+            },
+            {
+              "field": "findings.h",
+              "suffix": "H",
+              "role": "warn"
+            }
+          ]
+        },
+        {
+          "label": "ISO 27001",
+          "field": "iso27001",
+          "as": "bool",
+          "yes": "certified",
+          "no": "none"
+        },
+        {
+          "label": "SOC 2",
+          "field": "soc2",
+          "as": "bool",
+          "yes": "type II",
+          "no": "none"
+        }
+      ]
+    },
+    {
+      "id": "markets",
+      "type": "matrix",
+      "icon": "layers",
+      "label": "Markets",
+      "title": "Contract terms by market",
+      "crumb": "Third-party assurance · Coverage",
+      "panel": "Contract terms by market",
+      "note": "Which terms version each market runs. Amber marks a market behind the EU master.",
+      "trailing": {
+        "label": "Renewal",
+        "field": "renewal",
+        "as": "mono"
+      }
+    },
+    {
+      "id": "policy",
+      "type": "conformance",
+      "icon": "flag",
+      "label": "Policy",
+      "title": "Assurance policy conformance",
+      "crumb": "Third-party assurance · Policy",
+      "panel": "Conformance to the assurance policy",
+      "note": "Each column is a policy requirement. ✕ is a required gap for that criticality, ! advisory, · not applicable."
+    }
+  ],
+  "standard": {
+    "label": "Third-party assurance policy",
+    "note": "What every supplier must meet for its criticality tier before and during engagement.",
+    "requirements": [
+      {
+        "id": "intake",
+        "short": "intake",
+        "label": "Intake steps complete",
+        "dimension": "onboarding",
+        "remedy": "Complete the outstanding intake steps",
+        "classes": {
+          "1": {
+            "level": "required",
+            "when": {
+              "everyOf": "steps",
+              "ne": "idle"
+            }
+          },
+          "2": {
+            "level": "required",
+            "when": {
+              "everyOf": "steps",
+              "ne": "idle"
+            }
+          },
+          "3": {
+            "level": "advisory",
+            "when": {
+              "everyOf": "steps",
+              "ne": "idle"
+            }
+          }
+        }
+      },
+      {
+        "id": "dpa",
+        "short": "dpa",
+        "label": "Data processing agreement signed",
+        "dimension": "onboarding",
+        "remedy": "Execute the DPA — required wherever personal data is shared",
+        "classes": {
+          "*": {
+            "level": "required",
+            "when": {
+              "field": "steps.dpa",
+              "eq": "ok"
+            }
+          }
+        }
+      },
+      {
+        "id": "security",
+        "short": "sec",
+        "label": "Security review passed",
+        "dimension": "onboarding",
+        "remedy": "Schedule or re-run the security review",
+        "classes": {
+          "1": {
+            "level": "required",
+            "when": {
+              "field": "steps.security",
+              "eq": "ok"
+            }
+          },
+          "2": {
+            "level": "required",
+            "when": {
+              "field": "steps.security",
+              "eq": "ok"
+            }
+          },
+          "3": {
+            "level": "advisory",
+            "when": {
+              "field": "steps.security",
+              "eq": "ok"
+            }
+          }
+        }
+      },
+      {
+        "id": "insurance",
+        "short": "ins",
+        "label": "Insurance evidence current",
+        "dimension": "onboarding",
+        "remedy": "Obtain current certificate of insurance",
+        "classes": {
+          "1": {
+            "level": "required",
+            "when": {
+              "field": "steps.insurance",
+              "eq": "ok"
+            }
+          },
+          "2": {
+            "level": "required",
+            "when": {
+              "field": "steps.insurance",
+              "eq": "ok"
+            }
+          }
+        }
+      },
+      {
+        "id": "control",
+        "short": "ctrl",
+        "label": "Control coverage at or above the tier threshold",
+        "dimension": "assurance",
+        "remedy": "Close control gaps or reduce the scope of the engagement",
+        "classes": {
+          "1": {
+            "level": "required",
+            "when": {
+              "field": "control",
+              "gte": 90
+            }
+          },
+          "2": {
+            "level": "required",
+            "when": {
+              "field": "control",
+              "gte": 75
+            }
+          },
+          "3": {
+            "level": "advisory",
+            "when": {
+              "field": "control",
+              "gte": 60
+            }
+          }
+        }
+      },
+      {
+        "id": "audit",
+        "short": "audit",
+        "label": "Audit not overdue",
+        "dimension": "assurance",
+        "remedy": "Book the overdue audit",
+        "classes": {
+          "*": {
+            "level": "required",
+            "when": {
+              "field": "audit",
+              "ne": "overdue"
+            }
+          }
+        }
+      },
+      {
+        "id": "findings",
+        "short": "find",
+        "label": "No critical findings open",
+        "dimension": "assurance",
+        "remedy": "Remediate or formally accept the critical finding",
+        "classes": {
+          "*": {
+            "level": "required",
+            "when": {
+              "field": "findings.c",
+              "eq": 0
+            }
+          }
+        }
+      },
+      {
+        "id": "iso",
+        "short": "iso",
+        "label": "ISO 27001 certified",
+        "dimension": "certification",
+        "remedy": "Obtain certification or document a compensating assessment",
+        "classes": {
+          "1": {
+            "level": "required",
+            "when": {
+              "field": "iso27001",
+              "truthy": true
+            }
+          },
+          "2": {
+            "level": "advisory",
+            "when": {
+              "field": "iso27001",
+              "truthy": true
+            }
+          }
+        }
+      },
+      {
+        "id": "terms",
+        "short": "terms",
+        "label": "All markets on current master terms",
+        "dimension": "markets",
+        "remedy": "Re-paper the market behind the EU master",
+        "classes": {
+          "1": {
+            "level": "required",
+            "when": {
+              "not": {
+                "flag": "stale"
+              }
+            }
+          },
+          "2": {
+            "level": "required",
+            "when": {
+              "not": {
+                "flag": "stale"
+              }
+            }
+          },
+          "3": {
+            "level": "advisory",
+            "when": {
+              "not": {
+                "flag": "stale"
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

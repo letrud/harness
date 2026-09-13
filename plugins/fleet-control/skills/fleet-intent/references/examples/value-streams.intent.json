@@ -1,0 +1,967 @@
+{
+  "spec": 1,
+  "title": "Value Stream Control Room",
+  "eyebrow": "Operating model · Value streams",
+  "brandIcon": "flow",
+  "liveLabel": "Process telemetry live",
+  "syncLabel": "last sync",
+  "unit": {
+    "singular": "value stream",
+    "plural": "value streams",
+    "id": "id",
+    "label": "name",
+    "subtitle": "scope",
+    "search": [
+      "name",
+      "scope",
+      "owner",
+      "domain"
+    ],
+    "searchPlaceholder": "Search stream, owner, domain…",
+    "accent": {
+      "field": "domain",
+      "palette": {
+        "Commercial": "#0f8a5f",
+        "Finance": "#3f7fbf",
+        "Supply": "#c06a3f",
+        "Service": "#a97bff",
+        "People": "#e76f00",
+        "Product": "#00acd7"
+      }
+    },
+    "group": {
+      "field": "owner",
+      "label": "Process owner"
+    },
+    "class": {
+      "field": "tier",
+      "label": "Criticality",
+      "prefix": "T",
+      "ranks": {
+        "1": "crit",
+        "2": "warn",
+        "3": "idle"
+      }
+    }
+  },
+  "states": {
+    "flowing": "ok",
+    "bottleneck": "warn",
+    "broken": "crit",
+    "changing": "active",
+    "manual": "absent",
+    "none": "absent"
+  },
+  "severityLabels": {
+    "ok": "flowing",
+    "warn": "constrained",
+    "crit": "broken"
+  },
+  "slots": [
+    "Nordics",
+    "UK",
+    "DACH",
+    "APAC"
+  ],
+  "dimensions": [
+    {
+      "id": "flow",
+      "label": "Flow",
+      "summary": {
+        "field": "instrumented",
+        "suffix": "% instrumented"
+      },
+      "render": {
+        "type": "sequence",
+        "field": "stages",
+        "steps": [
+          {
+            "key": "capture",
+            "short": "cap",
+            "label": "Capture demand"
+          },
+          {
+            "key": "validate",
+            "short": "val",
+            "label": "Validate & price"
+          },
+          {
+            "key": "fulfil",
+            "short": "ful",
+            "label": "Fulfil"
+          },
+          {
+            "key": "handover",
+            "short": "hdo",
+            "label": "Handover"
+          },
+          {
+            "key": "settle",
+            "short": "set",
+            "label": "Settle"
+          },
+          {
+            "key": "close",
+            "short": "cls",
+            "label": "Close & learn"
+          }
+        ],
+        "stateNotes": {
+          "flowing": "flowing within takt",
+          "changing": "under change right now",
+          "bottleneck": "constraint — work queues here",
+          "broken": "blocked — work stops here",
+          "manual": "manual handoff, not instrumented"
+        }
+      },
+      "details": [
+        {
+          "label": "Stages instrumented",
+          "field": "instrumented",
+          "suffix": "%"
+        },
+        {
+          "label": "Cycle time",
+          "field": "cycle",
+          "mono": true
+        },
+        {
+          "label": "Handoffs",
+          "field": "handoffs"
+        },
+        {
+          "label": "Open backlog",
+          "field": "backlog"
+        },
+        {
+          "label": "Last process change",
+          "field": "lastChange"
+        }
+      ],
+      "trend": {
+        "field": "throughput",
+        "label": "Completions per day · last 10 days"
+      }
+    },
+    {
+      "id": "performance",
+      "label": "Performance",
+      "summary": {
+        "template": "{cycle} cycle · {handoffs} handoffs"
+      },
+      "render": {
+        "type": "gauge",
+        "verdict": {
+          "field": "sla",
+          "labels": {
+            "met": "SLA met",
+            "at-risk": "SLA at risk",
+            "breached": "SLA breached"
+          },
+          "roles": {
+            "met": "ok",
+            "at-risk": "warn",
+            "breached": "crit"
+          }
+        },
+        "value": {
+          "field": "stp",
+          "label": "straight-through",
+          "suffix": "%",
+          "target": 85
+        },
+        "counters": [
+          {
+            "field": "escalations",
+            "suffix": "E",
+            "role": "crit",
+            "label": "open escalations"
+          },
+          {
+            "field": "exceptions",
+            "suffix": "X",
+            "role": "warn",
+            "label": "exceptions per day"
+          }
+        ]
+      },
+      "details": [
+        {
+          "label": "Straight-through rate",
+          "field": "stp",
+          "suffix": "%"
+        },
+        {
+          "label": "SLA status",
+          "field": "sla"
+        },
+        {
+          "label": "Open escalations",
+          "field": "escalations"
+        },
+        {
+          "label": "Exceptions per day",
+          "field": "exceptions"
+        },
+        {
+          "label": "Rework rate",
+          "field": "rework",
+          "suffix": "%"
+        }
+      ]
+    },
+    {
+      "id": "footprint",
+      "label": "Footprint",
+      "summary": {
+        "derived": "matrix"
+      },
+      "render": {
+        "type": "matrix",
+        "value": "version",
+        "state": "regionState",
+        "reference": "Nordics",
+        "compare": "semver",
+        "drift": {
+          "distinctOver": 2,
+          "staleAny": true
+        }
+      },
+      "details": [
+        {
+          "label": "Design authority",
+          "field": "authority"
+        },
+        {
+          "label": "Regions live",
+          "field": "regionsLive"
+        },
+        {
+          "label": "Last process change",
+          "field": "lastChange"
+        }
+      ]
+    },
+    {
+      "id": "resilience",
+      "label": "Resilience",
+      "card": false,
+      "render": {
+        "type": "facts",
+        "facts": [
+          {
+            "label": "Owner named",
+            "field": "ownerNamed",
+            "as": "bool",
+            "yes": "yes",
+            "no": "vacant"
+          },
+          {
+            "label": "Continuity plan",
+            "field": "continuity",
+            "as": "bool",
+            "yes": "current",
+            "no": "none"
+          },
+          {
+            "label": "Controls evidenced",
+            "field": "controls",
+            "as": "bool",
+            "yes": "evidenced",
+            "no": "gap"
+          },
+          {
+            "label": "Key-person risk",
+            "field": "keyPerson",
+            "max": 1,
+            "warnMax": 2
+          }
+        ]
+      },
+      "details": [
+        {
+          "label": "Process owner",
+          "field": "owner"
+        },
+        {
+          "label": "Key-person dependencies",
+          "field": "keyPerson"
+        },
+        {
+          "label": "Continuity plan",
+          "field": "continuity"
+        },
+        {
+          "label": "Controls evidenced",
+          "field": "controls"
+        }
+      ]
+    }
+  ],
+  "severity": [
+    {
+      "role": "crit",
+      "when": {
+        "any": [
+          {
+            "field": "sla",
+            "eq": "breached"
+          },
+          {
+            "field": "escalations",
+            "gt": 0
+          },
+          {
+            "anyOf": "stages",
+            "eq": "broken"
+          }
+        ]
+      }
+    },
+    {
+      "role": "warn",
+      "when": {
+        "any": [
+          {
+            "field": "sla",
+            "eq": "at-risk"
+          },
+          {
+            "anyOf": "stages",
+            "eq": "bottleneck"
+          },
+          {
+            "field": "exceptions",
+            "gte": 20
+          },
+          {
+            "flag": "drifted"
+          }
+        ]
+      }
+    }
+  ],
+  "standard": {
+    "label": "Operating standard",
+    "note": "What every value stream must meet for its criticality tier.",
+    "requirements": [
+      {
+        "id": "owner",
+        "short": "own",
+        "label": "Named process owner accountable for the stream",
+        "dimension": "resilience",
+        "remedy": "Appoint a process owner — an unowned stream cannot be improved",
+        "classes": {
+          "*": {
+            "level": "required",
+            "when": {
+              "field": "ownerNamed",
+              "truthy": true
+            }
+          }
+        }
+      },
+      {
+        "id": "instrumented",
+        "short": "instr",
+        "label": "Every stage instrumented end to end",
+        "dimension": "flow",
+        "remedy": "Instrument the manual stages — you cannot manage flow you cannot see",
+        "classes": {
+          "1": {
+            "level": "required",
+            "when": {
+              "everyOf": "stages",
+              "ne": "manual"
+            }
+          },
+          "2": {
+            "level": "required",
+            "when": {
+              "everyOf": "stages",
+              "ne": "manual"
+            }
+          },
+          "3": {
+            "level": "advisory",
+            "when": {
+              "everyOf": "stages",
+              "ne": "manual"
+            }
+          }
+        }
+      },
+      {
+        "id": "no-broken",
+        "short": "flow",
+        "label": "No stage blocking flow",
+        "dimension": "flow",
+        "remedy": "Clear the blocked stage before anything else in this stream",
+        "classes": {
+          "*": {
+            "level": "required",
+            "when": {
+              "not": {
+                "anyOf": "stages",
+                "eq": "broken"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "sla",
+        "short": "sla",
+        "label": "Service level being met",
+        "dimension": "performance",
+        "remedy": "Recover the SLA or renegotiate it — a permanently breached SLA is not a target",
+        "classes": {
+          "1": {
+            "level": "required",
+            "when": {
+              "field": "sla",
+              "ne": "breached"
+            }
+          },
+          "2": {
+            "level": "required",
+            "when": {
+              "field": "sla",
+              "ne": "breached"
+            }
+          },
+          "3": {
+            "level": "advisory",
+            "when": {
+              "field": "sla",
+              "ne": "breached"
+            }
+          }
+        }
+      },
+      {
+        "id": "stp",
+        "short": "stp",
+        "label": "Straight-through rate at or above the tier threshold",
+        "dimension": "performance",
+        "remedy": "Automate the highest-volume exception path",
+        "classes": {
+          "1": {
+            "level": "required",
+            "when": {
+              "field": "stp",
+              "gte": 85
+            }
+          },
+          "2": {
+            "level": "required",
+            "when": {
+              "field": "stp",
+              "gte": 70
+            }
+          },
+          "3": {
+            "level": "advisory",
+            "when": {
+              "field": "stp",
+              "gte": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "escalations",
+        "short": "esc",
+        "label": "No open escalations",
+        "dimension": "performance",
+        "remedy": "Resolve or formally accept the escalation",
+        "classes": {
+          "*": {
+            "level": "required",
+            "when": {
+              "field": "escalations",
+              "eq": 0
+            }
+          }
+        }
+      },
+      {
+        "id": "cycle",
+        "short": "cycle",
+        "label": "Cycle time within the tier target",
+        "dimension": "performance",
+        "remedy": "Attack the constraint stage — cycle time follows the bottleneck, not the average",
+        "classes": {
+          "1": {
+            "level": "required",
+            "when": {
+              "field": "cycleH",
+              "lte": 48
+            }
+          },
+          "2": {
+            "level": "required",
+            "when": {
+              "field": "cycleH",
+              "lte": 120
+            }
+          },
+          "3": {
+            "level": "advisory",
+            "when": {
+              "field": "cycleH",
+              "lte": 336
+            }
+          }
+        }
+      },
+      {
+        "id": "handoffs",
+        "short": "hand",
+        "label": "Handoffs within the tier limit",
+        "dimension": "flow",
+        "remedy": "Remove a handoff — each one adds queue time and a place to lose context",
+        "classes": {
+          "1": {
+            "level": "required",
+            "when": {
+              "field": "handoffs",
+              "lte": 4
+            }
+          },
+          "2": {
+            "level": "advisory",
+            "when": {
+              "field": "handoffs",
+              "lte": 6
+            }
+          }
+        }
+      },
+      {
+        "id": "version",
+        "short": "ver",
+        "label": "No region running behind the design authority",
+        "dimension": "footprint",
+        "remedy": "Roll the reference process version out to the lagging region",
+        "classes": {
+          "1": {
+            "level": "required",
+            "when": {
+              "not": {
+                "flag": "stale"
+              }
+            }
+          },
+          "2": {
+            "level": "required",
+            "when": {
+              "not": {
+                "flag": "stale"
+              }
+            }
+          },
+          "3": {
+            "level": "advisory",
+            "when": {
+              "not": {
+                "flag": "stale"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "continuity",
+        "short": "bcp",
+        "label": "Continuity plan current",
+        "dimension": "resilience",
+        "remedy": "Write or refresh the continuity plan and test it",
+        "classes": {
+          "1": {
+            "level": "required",
+            "when": {
+              "field": "continuity",
+              "truthy": true
+            }
+          },
+          "2": {
+            "level": "required",
+            "when": {
+              "field": "continuity",
+              "truthy": true
+            }
+          }
+        }
+      },
+      {
+        "id": "keyperson",
+        "short": "kpr",
+        "label": "Key-person dependencies within the tier limit",
+        "dimension": "resilience",
+        "remedy": "Cross-train or document the dependency — one person is not a process",
+        "classes": {
+          "1": {
+            "level": "required",
+            "when": {
+              "field": "keyPerson",
+              "lte": 1
+            }
+          },
+          "2": {
+            "level": "required",
+            "when": {
+              "field": "keyPerson",
+              "lte": 2
+            }
+          },
+          "3": {
+            "level": "advisory",
+            "when": {
+              "field": "keyPerson",
+              "lte": 3
+            }
+          }
+        }
+      },
+      {
+        "id": "controls",
+        "short": "ctrl",
+        "label": "Controls evidenced at the last review",
+        "dimension": "resilience",
+        "remedy": "Evidence the controls — unevidenced controls are assumptions",
+        "classes": {
+          "1": {
+            "level": "required",
+            "when": {
+              "field": "controls",
+              "truthy": true
+            }
+          },
+          "2": {
+            "level": "required",
+            "when": {
+              "field": "controls",
+              "truthy": true
+            }
+          },
+          "3": {
+            "level": "advisory",
+            "when": {
+              "field": "controls",
+              "truthy": true
+            }
+          }
+        }
+      }
+    ]
+  },
+  "card": {
+    "footer": [
+      {
+        "label": "backlog",
+        "field": "backlog"
+      },
+      {
+        "label": "rework",
+        "field": "rework",
+        "suffix": "%"
+      }
+    ],
+    "trend": "throughput"
+  },
+  "band": [
+    {
+      "label": "Value streams",
+      "agg": "count",
+      "breakdown": "severity"
+    },
+    {
+      "label": "Instrumented",
+      "agg": "avg",
+      "field": "instrumented",
+      "suffix": "%",
+      "sub": "of stages emitting telemetry across the model"
+    },
+    {
+      "label": "Standard met",
+      "agg": "conformance",
+      "suffix": "%",
+      "sub": "of applicable operating requirements"
+    },
+    {
+      "label": "SLA met",
+      "agg": "countWhere",
+      "when": {
+        "field": "sla",
+        "eq": "met"
+      },
+      "of": "total",
+      "sub": "streams inside their service level"
+    },
+    {
+      "label": "Regional drift",
+      "agg": "countWhere",
+      "when": {
+        "flag": "drifted"
+      },
+      "tone": "inverse",
+      "sub": "streams not aligned to the design authority"
+    },
+    {
+      "label": "Completions · 7d",
+      "agg": "sum",
+      "field": "completions",
+      "trend": "throughput"
+    }
+  ],
+  "filters": [
+    {
+      "id": "all",
+      "label": "All"
+    },
+    {
+      "id": "attention",
+      "label": "Needs attention",
+      "when": {
+        "not": {
+          "severity": "ok"
+        }
+      }
+    },
+    {
+      "id": "nonconformant",
+      "label": "Below standard",
+      "when": {
+        "flag": "nonconformant"
+      }
+    },
+    {
+      "id": "manual",
+      "label": "Manual stages",
+      "when": {
+        "anyOf": "stages",
+        "eq": "manual"
+      }
+    },
+    {
+      "id": "tier1",
+      "label": "Critical streams",
+      "when": {
+        "field": "tier",
+        "eq": 1
+      }
+    }
+  ],
+  "sorts": [
+    {
+      "id": "risk",
+      "label": "risk first",
+      "by": "severity",
+      "then": "stp"
+    },
+    {
+      "id": "name",
+      "label": "name",
+      "field": "name"
+    },
+    {
+      "id": "stp",
+      "label": "straight-through",
+      "field": "stp",
+      "dir": "desc"
+    },
+    {
+      "id": "cycle",
+      "label": "cycle time",
+      "field": "cycleH"
+    },
+    {
+      "id": "instrumented",
+      "label": "instrumentation",
+      "field": "instrumented",
+      "dir": "desc"
+    },
+    {
+      "id": "backlog",
+      "label": "backlog",
+      "field": "backlog",
+      "dir": "desc"
+    }
+  ],
+  "legend": [
+    {
+      "swatch": "ok",
+      "label": "flowing"
+    },
+    {
+      "swatch": "warn",
+      "label": "constrained"
+    },
+    {
+      "swatch": "crit",
+      "label": "broken"
+    },
+    {
+      "swatch": "active",
+      "label": "under change now"
+    },
+    {
+      "label": "hatched = manual handoff, not instrumented"
+    },
+    {
+      "label": "↑ ahead of the design authority · ⚠ behind it"
+    }
+  ],
+  "views": [
+    {
+      "id": "streams",
+      "type": "cards",
+      "icon": "flow",
+      "label": "Value streams",
+      "title": "Value stream overview",
+      "crumb": "Operating model · Value streams"
+    },
+    {
+      "id": "flow",
+      "type": "table",
+      "icon": "list",
+      "label": "Flow",
+      "title": "Flow and constraints",
+      "crumb": "Operating model · Flow",
+      "panel": "Flow and constraints",
+      "note": "Where work queues, where it stops, and how much of each stream is visible at all.",
+      "columns": [
+        {
+          "label": "Value stream",
+          "field": "name",
+          "sub": "owner"
+        },
+        {
+          "label": "Stages",
+          "as": "sequence",
+          "dimension": "flow",
+          "width": 220
+        },
+        {
+          "label": "Instrumented",
+          "field": "instrumented",
+          "as": "num",
+          "suffix": "%"
+        },
+        {
+          "label": "Cycle",
+          "field": "cycle",
+          "as": "mono"
+        },
+        {
+          "label": "Handoffs",
+          "field": "handoffs",
+          "as": "num"
+        },
+        {
+          "label": "Backlog",
+          "field": "backlog",
+          "as": "num"
+        },
+        {
+          "label": "Throughput",
+          "field": "throughput",
+          "as": "trend"
+        }
+      ]
+    },
+    {
+      "id": "performance",
+      "type": "table",
+      "icon": "chart",
+      "label": "Performance",
+      "title": "Service performance",
+      "crumb": "Operating model · Performance",
+      "panel": "Service performance",
+      "note": "Straight-through target is 85% — the tick on each bar.",
+      "columns": [
+        {
+          "label": "Value stream",
+          "field": "name",
+          "sub": "domain"
+        },
+        {
+          "label": "SLA",
+          "field": "sla",
+          "as": "verdict",
+          "labels": {
+            "met": "met",
+            "at-risk": "at risk",
+            "breached": "breached"
+          },
+          "roles": {
+            "met": "ok",
+            "at-risk": "warn",
+            "breached": "crit"
+          }
+        },
+        {
+          "label": "Straight-through",
+          "field": "stp",
+          "as": "meter",
+          "target": 85,
+          "suffix": "%",
+          "width": 150
+        },
+        {
+          "label": "Open items",
+          "as": "counters",
+          "counters": [
+            {
+              "field": "escalations",
+              "suffix": "E",
+              "role": "crit"
+            },
+            {
+              "field": "exceptions",
+              "suffix": "X",
+              "role": "warn"
+            }
+          ]
+        },
+        {
+          "label": "Rework",
+          "field": "rework",
+          "as": "num",
+          "suffix": "%"
+        },
+        {
+          "label": "Cycle",
+          "field": "cycle",
+          "as": "mono"
+        }
+      ]
+    },
+    {
+      "id": "footprint",
+      "type": "matrix",
+      "icon": "layers",
+      "label": "Footprint",
+      "title": "Regional footprint",
+      "crumb": "Operating model · Footprint",
+      "panel": "Process version by region",
+      "note": "Which version of the process each region runs. Amber marks a region behind the Nordics design authority.",
+      "trailing": {
+        "label": "Last change",
+        "field": "lastChange",
+        "as": "muted"
+      }
+    },
+    {
+      "id": "standard",
+      "type": "conformance",
+      "icon": "flag",
+      "label": "Operating standard",
+      "title": "Operating standard",
+      "crumb": "Operating model · Standard",
+      "panel": "Conformance to the operating standard",
+      "note": "Each column is an operating requirement. ✕ is a required gap at that criticality, ! advisory, · not applicable."
+    }
+  ]
+}

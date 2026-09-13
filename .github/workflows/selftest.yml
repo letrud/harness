@@ -1,0 +1,98 @@
+name: Harness self-test
+
+# The engine must be able to scaffold, audit and render every worked example
+# before any fleet repo is allowed to pin a new ref of it.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  examples:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        fleet: [software-factory, supplier-assurance, value-streams]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install jsonschema
+
+      - name: Intent validates against the schema
+        run: |
+          python3 - <<'PY'
+          import json, jsonschema, pathlib
+          base = pathlib.Path("plugins/fleet-control/skills/fleet-intent/references")
+          schema = json.loads((base / "intent.schema.json").read_text())
+          intent = json.loads((base / "examples/${{ matrix.fleet }}.intent.json").read_text())
+          jsonschema.Draft202012Validator(schema).validate(intent)
+          print("ok")
+          PY
+
+      - name: Data satisfies the contract
+        run: |
+          B=plugins/fleet-control/skills
+          python3 $B/fleet-scaffold/references/scaffold.py \
+            $B/fleet-intent/references/examples/${{ matrix.fleet }}.intent.json \
+            data $B/fleet-intent/references/examples/${{ matrix.fleet }}.data.json check \
+            | tee out.txt
+          grep -q ", 0 incomplete" out.txt
+
+      - name: Scaffolding produces an honest skeleton
+        run: |
+          B=plugins/fleet-control/skills
+          python3 $B/fleet-scaffold/references/scaffold.py \
+            $B/fleet-intent/references/examples/${{ matrix.fleet }}.intent.json \
+            instance __selftest__ --class 1 > skel.json
+          python3 -c "
+          import json; d=json.load(open('skel.json'))
+          assert d, 'empty skeleton'
+          print(len(d), 'fields seeded')"
+
+      - name: Audit runs and reports
+        run: |
+          B=plugins/fleet-control/skills
+          python3 $B/fleet-audit/references/audit.py \
+            $B/fleet-intent/references/examples/${{ matrix.fleet }}.intent.json \
+            $B/fleet-intent/references/examples/${{ matrix.fleet }}.data.json --json > audit.json
+          python3 -c "
+          import json; r=json.load(open('audit.json'))
+          assert r, 'audit produced nothing'
+          print(sum(1 for x in r if x['required_gaps']), 'of', len(r), 'with required gaps')"
+
+      - name: Renders
+        run: |
+          B=plugins/fleet-control/skills
+          python3 $B/fleet-surface/references/build.py \
+            $B/fleet-intent/references/examples/${{ matrix.fleet }}.intent.json \
+            $B/fleet-intent/references/examples/${{ matrix.fleet }}.data.json out.html
+          python3 -c "
+          s=open('out.html').read()
+          for p in ('__SPEC__','__DATA__','__TITLE__'):
+              assert p not in s, p+' left unreplaced'
+          assert len(s) > 40000, 'suspiciously small render'
+          print(len(s)//1024, 'KB rendered')"
+
+  plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Marketplace and plugin manifests are well formed
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, re
+          mk = json.loads(pathlib.Path(".claude-plugin/marketplace.json").read_text())
+          assert mk["name"] and mk["plugins"], "marketplace incomplete"
+          for p in mk["plugins"]:
+              src = pathlib.Path(p["source"])
+              man = json.loads((src / ".claude-plugin" / "plugin.json").read_text())
+              assert re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", man["name"]), man["name"]
+              skills = list((src / "skills").glob("*/SKILL.md"))
+              assert skills, "plugin has no skills"
+              print(man["name"], man["version"], f"{len(skills)} skills")
+          PY
