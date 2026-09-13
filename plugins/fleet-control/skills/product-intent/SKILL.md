@@ -47,7 +47,7 @@ Without this an agent records a failure honestly, opens the pull request, and is
 
 **6. External inputs, named by convention.** Credentials, endpoints, tokens: state the environment variable names and resolution order - *"`PSD2_CRED_<BANK>_<ENV>_CERT` / `_KEY`, base64 or PEM; then a committed test identity, evaluation only; then the local profile."* One convention makes CI, local use and the agent's own proof identical, with no per-repository wiring.
 
-**7. Where specific knowledge goes.** Behaviour learned from a real counterparty belongs in that instance's declarative folder, stated as a testable failure - *"without `psu-id`: FORMAT_ERROR 'Missing header'"* - never in a prompt, a README or a chat. The loop that keeps the intent complete: the environment surfaces a behaviour, the change records it as a quirk in the same pull request, the next implementer inherits it.
+**7. Where specific knowledge goes.** Behaviour learned from a real counterparty belongs in that instance's declarative folder, stated as a testable failure - *"without `psu-id`: FORMAT_ERROR 'Missing header'"* - never in a prompt, a README or a chat. The loop that keeps the intent complete: the environment surfaces a behaviour, it is proposed as its own change to the pack - a quirk stating the failure it prevents - and named in the implementation change that depends on it; the next implementer inherits it.
 
 ## Silence is a decision surface
 
