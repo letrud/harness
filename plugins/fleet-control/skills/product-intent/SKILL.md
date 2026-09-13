@@ -36,7 +36,7 @@ These are the sections an agent cannot do without. Each was learned by leaving i
 **3. Generated outputs, declared - and who writes them.** Name the files under `intent/` that the implementation writes - evidence, generated docs - and state that the automation on the default branch writes them, after a change is accepted, and that *a change to the implementation modifies nothing under `intent/`*. Two writers own the folder - people for the specification and the declared data, automation for the generated files - and a pull request is neither. This is what lets "never edit the intent" coexist with "record what happened"; without it, every pull request carries regenerated evidence and conflicts with the default branch on merge. Say too that a change is to the intent or to the implementation, never both, so that CI can refuse the mixture.
 
 **4. Acceptance.** The section most often missing. State:
-- what proves the implementation: unit tests against a stand-in prove the logic; only evaluation against the real test environment proves the counterparty accepts what is sent. Both, neither substitutes;
+- what proves the implementation: unit tests against a stand-in prove the logic; only evaluation against the real test environment proves the counterparty accepts what is sent. Both, neither substitutes. The evaluation drives the product **through its own surface** - the API a client would call, the command a person would run - never a reimplementation of it, or it proves the harness and not the product;
 - **who runs the evaluation and when** - whoever makes the change, before submitting it, with the credentials available to them;
 - **what a failure means** - an operation that fails against a *reachable* test environment is a defect in the change, never evidence to record and move past, unless a limitation the intent itself declares explains it;
 - what a change must not do - lose an operation that passed before it.
@@ -45,9 +45,13 @@ Without this an agent records a failure honestly, opens the pull request, and is
 
 **5. Limitations, declared alongside requirements.** A place for facts about the environment that make a correct implementation look broken: *"test users ship with an empty ledger"*, *"pagination never engages with four accounts"*. An implementation MUST surface them when a result is empty. Without them, the agent cannot tell an environment limit from its own defect - and neither can a reader of the evidence.
 
-**6. External inputs, named by convention.** Credentials, endpoints, tokens: state the environment variable names and resolution order - *"`PSD2_CRED_<BANK>_<ENV>_CERT` / `_KEY`, base64 or PEM; then a committed test identity, evaluation only; then the local profile."* One convention makes CI, local use and the agent's own proof identical, with no per-repository wiring.
+**6. External inputs, named by convention - each name in full.** Credentials, endpoints, tokens: state the environment variable names and resolution order - *"`PSD2_CRED_<BANK>_<ENV>_CERT` and `PSD2_CRED_<BANK>_<ENV>_KEY`, base64 or PEM; then a committed test identity, evaluation only."* Write every name out; a shorthand like *"`…_CERT` / `_KEY`"* names one input, not two. The harness reads these conventions literally - placeholders in angle brackets match anything - to decide which secrets the agent may have, so a repository with an intent and no CI yet still gets its proofs. One convention makes CI, local use and the agent's own proof identical, with no per-repository wiring.
 
-**7. Where specific knowledge goes.** Behaviour learned from a real counterparty belongs in that instance's declarative folder, stated as a testable failure - *"without `psu-id`: FORMAT_ERROR 'Missing header'"* - never in a prompt, a README or a chat. The loop that keeps the intent complete: the environment surfaces a behaviour, it is proposed as its own change to the pack - a quirk stating the failure it prevents - and named in the implementation change that depends on it; the next implementer inherits it.
+**7. Where specific knowledge goes - and, when two products share it, which one owns it.** Behaviour learned from a real counterparty belongs in that instance's declarative folder, stated as a testable failure - *"without `psu-id`: FORMAT_ERROR 'Missing header'"* - never in a prompt, a README or a chat. The loop that keeps the intent complete: the environment surfaces a behaviour, it is proposed as its own change to the pack - a quirk stating the failure it prevents - and named in the implementation change that depends on it; the next implementer inherits it. When a second product consumes the same declarative data - the same bank packs - one repository owns it and the other names that repository and a pinned ref as its source; two copies are two writers, and they drift within a week.
+
+**8. The parties, and who authenticates to whom.** A product that talks to other systems on someone's behalf has at least three parties - the counterparty it calls, the subject it acts for, the client that asks - and the intent MUST say which is which, what identifies each, and what each presents to the product. *"The API is the provider towards each bank. A person is identified by the token's issuer and `sub` and by nothing else. A client is whatever holds a person's token."* Say where identity comes from (issued here, or validated from an issuer you name) and what the product MUST NOT do with it (issue tokens, hold passwords, log identifiers). Left unsaid, an implementer invents an identity model - the one thing that is hardest to change later.
+
+**9. What happens when configuration is missing.** *"Missing configuration MUST fail readiness with the name of what is missing, never serve half-configured."* One sentence; it found a real defect - a route that panicked instead of answering 503 - on the first review.
 
 ## Silence is a decision surface
 
@@ -67,6 +71,8 @@ Where the intent is silent, the agent decides like a careful engineer and record
 - **Suppose it is unreachable. Does the intent say what happens to the evidence that exists?**
 - **Suppose a result is empty. Can the implementation tell the reader why, from the intent alone?**
 - **Is every choice you care about written down?** Language, layout, distribution, defaults.
+- **Who are the parties, and does the intent say what each presents?** If identity is inferred, it will be invented.
+- **Is every external input named in full?** Count the names; count the secrets the proof needs.
 - **Could this folder be handed to a stranger in another language and produce the same product?** That is the test the whole approach rests on.
 
 ## The way of working
