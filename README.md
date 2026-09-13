@@ -9,7 +9,7 @@ Shared machinery for repositories whose **intent is the contract and everything 
                      ├── plugins/fleet-control the fleet engine: schema, scaffold, audit, renderer, skills
                      └── marketplace           fleet-control@fleet-harness, installable by people and by CI
 
-fleet repos          software-factory   every repo in the estate, held to a golden-path baseline
+fleet repos          lights-out         every repo in the estate, held to a golden-path baseline
                      ops                every value stream, held to an operating standard
                        intent + data + collector ──► audit ──► control room (static HTML, GitHub Pages)
 
@@ -39,7 +39,7 @@ jobs:
   intent:
     uses: letrud/harness/.github/workflows/on-intent-change.yml@v1
     with:
-      fleet: software-factory
+      fleet: lights-out
       harness_repo: letrud/harness
       harness_ref: v1
     secrets:
