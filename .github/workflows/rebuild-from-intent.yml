@@ -252,6 +252,14 @@ jobs:
             after your change is accepted. Run the proofs, state their result per instance and
             per operation in the pull request, and discard the files they regenerate.
           - Do not modify the workflow that dispatched you.
+          - GitHub refuses a push that touches \`.github/workflows/\` from the token you have; that
+            is a platform rule, not something to solve. Place any workflow you create or change
+            under \`ci-pending/\` with a one-paragraph README saying they belong in
+            \`.github/workflows/\`, commit, and carry on. A person moves them when merging.
+          - You are unattended. Nobody will answer a question, so never end your session asking
+            one. Where you would ask, decide as a careful engineer would, record the decision in
+            the pull request, and continue. A session that ends without a pull request has
+            failed, whatever else it did.
           - The runner already has Go, Node, Python, Java, .NET and Rust. Install anything
             else you need in the job, and in \`build.yml\`.
           - The secrets this repository's own CI uses are in your environment under the same

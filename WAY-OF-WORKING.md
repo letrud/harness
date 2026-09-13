@@ -68,6 +68,8 @@ Read the pull request as a claim and CI as its verification:
 
 A pull request opened by the agent is authored by `github-actions[bot]`, and GitHub holds its workflow runs until a person approves them once (the run's page → *Approve and run*, or `gh api -X POST repos/<owner>/<repo>/actions/runs/<id>/approve`). A push to the branch by a person lifts the hold too. Until then the checks show as awaiting action, not as failed.
 
+The job token cannot push under `.github/workflows/`, so an agent stages any CI it writes under `ci-pending/`; the person merging moves those files into place (and deletes `ci-pending/`) as part of the merge. A `workflow`-scoped token would remove this step.
+
 Merge with a merge commit; the agent's commits are its account of the work. Rebase, do not merge, when the branch is behind — and if a derived file conflicts, take the default branch's copy and regenerate.
 
 ## 8. Releasing
