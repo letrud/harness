@@ -344,7 +344,7 @@ jobs:
       # secrets — a bank's test credentials, a registry token. The agent gets exactly
       # the secrets the repository names: by literal reference in its own workflows
       # (`secrets.NAME` under .github/workflows/), or by a name convention its intent
-      # states (`PSD2_CRED_<BANK>_<ENV>_CERT` — placeholders in angle brackets match
+      # states (`<PRODUCT>_CRED_<INSTANCE>_<ENV>_CERT` — placeholders in angle brackets match
       # anything). Never the Claude credentials or the job token, and never anything
       # the repository does not itself name. Values are masked in the log.
       - name: Give the agent the secrets its CI uses

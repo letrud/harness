@@ -15,7 +15,7 @@ How repositories built on this harness are changed, proven, accepted and release
 
 CI refuses a pull request that does both. Two writers own `intent/`: people, for the specification and the declared data; the automation on the default branch, for whatever the intent declares as generated — evidence, generated docs, collected data. A pull request is neither writer.
 
-Something learned while implementing that belongs in the intent — a bank's quirk, a source's mapping, a limitation — is proposed as its own intent change and named in the implementation change that depends on it.
+Something learned while implementing that belongs in the intent — a counterparty's quirk, a source's mapping, a limitation — is proposed as its own intent change and named in the implementation change that depends on it.
 
 ## 3. Whoever changes it, proves it — before submitting
 
@@ -35,7 +35,7 @@ Evidence, generated docs, collected data: written by the automation on the defau
 
 ## 5. Secrets
 
-Credentials are named by convention in the intent (`PSD2_CRED_<BANK>_<ENV>_CERT`, a token's environment variable) and held as **Actions** secrets on the repository — never in the tree, never in Codespaces secrets (workflows cannot read those). The agent's environment gets exactly the secrets the repository's own CI references, so its proofs are CI's proofs. One secret for many repositories needs an organisation; on a personal account it is one per repo.
+Credentials are named by convention in the intent (`<PRODUCT>_CRED_<INSTANCE>_<ENV>_CERT`, a token's environment variable) and held as **Actions** secrets on the repository — never in the tree, never in Codespaces secrets (workflows cannot read those). The agent's environment gets exactly the secrets the repository's own CI references, so its proofs are CI's proofs. One secret for many repositories needs an organisation; on a personal account it is one per repo.
 
 ## 6. The agent's loop
 
