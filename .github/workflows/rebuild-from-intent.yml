@@ -217,8 +217,10 @@ jobs:
 
           ## Delivering
 
-          Commit on a branch prefixed \`$PREFIX\`, push it, and open a pull request against the
-          default branch with \`gh pr create\`. The description states, in plain language: what
+          Before you write code, create a branch prefixed \`$PREFIX\` and push it. Commit and push
+          as you go — after each coherent step, not only at the end — so that nothing is lost if
+          this session is cut short. When done, open a pull request against the default branch
+          with \`gh pr create\`. The description states, in plain language: what
           the intent required (and what changed, if this was a change), how the implementation
           satisfies each part of it, what you decided where the intent was silent, and what you
           could not verify. Do not merge.
@@ -230,9 +232,11 @@ jobs:
       # Bash is unrestricted: the agent must run whatever toolchain the intent names,
       # and the runner is ephemeral. The credential it could read is the one it is using.
       - name: Bring the implementation into line with the intent
+        id: claude
         if: ${{ inputs.autofix && steps.cred.outputs.present == 'true' }}
         uses: anthropics/claude-code-action@v1
         with:
+          show_full_output: true
           anthropic_api_key: ${{ secrets.anthropic_api_key }}
           claude_code_oauth_token: ${{ secrets.claude_code_oauth_token }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -241,6 +245,54 @@ jobs:
           claude_args: |
             ${{ inputs.claude_args }}
             --allowedTools "Bash,Edit,Write,Read,Glob,Grep,MultiEdit"
+
+      # The transcript is the only account of what the agent did and why it
+      # stopped. Keep it: GitHub masks registered secrets in logs and artifacts.
+      - name: Keep the transcript
+        if: ${{ always() && steps.claude.outputs.execution_file != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-transcript
+          path: ${{ steps.claude.outputs.execution_file }}
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Transcript digest
+        id: digest
+        if: ${{ always() && steps.claude.outputs.execution_file != '' }}
+        env:
+          FILE: ${{ steps.claude.outputs.execution_file }}
+        run: |
+          python3 - <<'PY' > digest.md || echo "_could not parse the transcript_" > digest.md
+          import json, os
+          msgs = json.load(open(os.environ["FILE"]))
+          if isinstance(msgs, dict): msgs = [msgs]
+          result = next((m for m in reversed(msgs) if m.get("type") == "result"), {})
+          texts = []
+          for m in msgs:
+              if m.get("type") != "assistant": continue
+              for b in (m.get("message") or {}).get("content") or []:
+                  if isinstance(b, dict) and b.get("type") == "text" and b.get("text", "").strip():
+                      texts.append(b["text"].strip())
+          tools = {}
+          for m in msgs:
+              if m.get("type") != "assistant": continue
+              for b in (m.get("message") or {}).get("content") or []:
+                  if isinstance(b, dict) and b.get("type") == "tool_use":
+                      tools[b.get("name")] = tools.get(b.get("name"), 0) + 1
+          print("### Agent transcript")
+          print()
+          print(f"- result: `{result.get('subtype')}`" + (" — **is_error**" if result.get("is_error") else ""))
+          print(f"- turns: {result.get('num_turns')} · duration: {round((result.get('duration_ms') or 0)/60000, 1)} min · cost: ${round(result.get('total_cost_usd') or 0, 2)}")
+          if tools: print("- tools: " + ", ".join(f"{k} ×{v}" for k, v in sorted(tools.items(), key=lambda kv: -kv[1])))
+          err = result.get("result") if result.get("is_error") else None
+          if err:
+              print(); print("**Error result**"); print(); print("```"); print(str(err)[:3000]); print("```")
+          if texts:
+              print(); print("**Last thing the agent said**"); print(); print(texts[-1][:4000])
+          print(); print("Full transcript: the `claude-transcript` artifact on this run.")
+          PY
+          cat digest.md
 
       - name: Summary
         if: always()
@@ -262,4 +314,6 @@ jobs:
             if [ "$DISPATCHED" = "true" ]; then echo "| rebuild | dispatched — see the pull request |"; else echo "| rebuild | not dispatched |"; fi
             echo
             if [ -s intent-change.stat ]; then echo '```'; cat intent-change.stat; echo '```'; fi
+            echo
+            [ -f digest.md ] && cat digest.md
           } >> "$GITHUB_STEP_SUMMARY"
