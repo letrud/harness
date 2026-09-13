@@ -277,12 +277,16 @@ jobs:
 
       # Bash is unrestricted: the agent must run whatever toolchain the intent names,
       # and the runner is ephemeral. The credential it could read is the one it is using.
+      #
+      # The full transcript contains every file the agent read. On a private repo it
+      # is kept (log + artifact) because it is the only account of a failed run; on a
+      # public repo only the digest is kept, so nothing the agent read becomes public.
       - name: Bring the implementation into line with the intent
         id: claude
         if: ${{ inputs.autofix && steps.cred.outputs.present == 'true' }}
         uses: anthropics/claude-code-action@v1
         with:
-          show_full_output: true
+          show_full_output: ${{ github.event.repository.private == true }}
           anthropic_api_key: ${{ secrets.anthropic_api_key }}
           claude_code_oauth_token: ${{ secrets.claude_code_oauth_token }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -295,7 +299,7 @@ jobs:
       # The transcript is the only account of what the agent did and why it
       # stopped. Keep it: GitHub masks registered secrets in logs and artifacts.
       - name: Keep the transcript
-        if: ${{ always() && steps.claude.outputs.execution_file != '' }}
+        if: ${{ always() && steps.claude.outputs.execution_file != '' && github.event.repository.private == true }}
         uses: actions/upload-artifact@v4
         with:
           name: claude-transcript
@@ -308,6 +312,7 @@ jobs:
         if: ${{ always() && steps.claude.outputs.execution_file != '' }}
         env:
           FILE: ${{ steps.claude.outputs.execution_file }}
+          PRIVATE: ${{ github.event.repository.private }}
         run: |
           python3 - <<'PY' > digest.md || echo "_could not parse the transcript_" > digest.md
           import json, os
@@ -336,7 +341,8 @@ jobs:
               print(); print("**Error result**"); print(); print("```"); print(str(err)[:3000]); print("```")
           if texts:
               print(); print("**Last thing the agent said**"); print(); print(texts[-1][:4000])
-          print(); print("Full transcript: the `claude-transcript` artifact on this run.")
+          private = os.environ.get("PRIVATE") == "true"
+          print(); print("Full transcript: the `claude-transcript` artifact on this run." if private else "Full transcript not kept: this repository is public.")
           PY
           cat digest.md
 
