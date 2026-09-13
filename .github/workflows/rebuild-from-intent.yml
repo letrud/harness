@@ -260,6 +260,9 @@ jobs:
             one. Where you would ask, decide as a careful engineer would, record the decision in
             the pull request, and continue. A session that ends without a pull request has
             failed, whatever else it did.
+          - Do the work yourself, in this session, to completion. Do not delegate to subagents
+            and do not wait for anything to notify you: the moment you yield your turn to wait,
+            the session is over. Review your own work by reading it.
           - The runner already has Go, Node, Python, Java, .NET and Rust. Install anything
             else you need in the job, and in \`build.yml\`.
           - The secrets this repository's own CI uses are in your environment under the same
@@ -396,6 +399,7 @@ jobs:
           claude_args: |
             ${{ inputs.claude_args }}
             --allowedTools "Bash,Edit,Write,Read,Glob,Grep,MultiEdit"
+            --disallowedTools "Task,Agent,TaskOutput,TaskStop,Monitor,ScheduleWakeup,CronCreate,Workflow"
 
       # The transcript is the only account of what the agent did and why it
       # stopped. Keep it: GitHub masks registered secrets in logs and artifacts.
