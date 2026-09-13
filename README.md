@@ -1,18 +1,36 @@
 # harness
 
-The engine three fleet repos run on — and a Claude Code plugin marketplace, so CI works from the same skills a person does.
+Shared machinery for repositories whose **intent is the contract and everything else is downstream of it**. Two kinds of repository call it:
 
 ```
-harness ──┬── plugins/fleet-control   the intent contract, renderer, scripts, skills
-          ├── on-intent-change        reusable workflow, called by each fleet repo on intent change
-          ├── rebuild-from-intent     reusable workflow, called by a product repo whose intent/ is its spec
-          └── marketplace             fleet-control@fleet-harness, installed in CI
+                     harness (this repo, pinned @v1)
+                     ├── on-intent-change      reusable workflow for a fleet repo
+                     ├── rebuild-from-intent   reusable workflow for a product repo
+                     ├── plugins/fleet-control the fleet engine: schema, scaffold, audit, renderer, skills
+                     └── marketplace           fleet-control@fleet-harness, installable by people and by CI
 
-software-factory ──► intent + data + collector ──► control room
-ops              ──► intent + data + collector ──► control room
+fleet repos          software-factory   every repo in the estate, held to a golden-path baseline
+                     ops                every value stream, held to an operating standard
+                       intent + data + collector ──► audit ──► control room (static HTML, GitHub Pages)
+
+product repos        psd2-cli           intent/ is the specification; the code is written from it
+                       intent change ──► agent reconciles the implementation ──► pull request
 ```
 
-## Using it from a fleet repo
+Neither workflow ever edits an intent. Both open pull requests and never merge. Both run without a Claude credential — they then validate, report and stop.
+
+## Fleet repos — `on-intent-change.yml`
+
+A fleet intent describes many comparable units held against a standard. The data file is the implementation; a collector fills it from real sources. On a change under `intent/` the workflow checks, in order:
+
+1. **schema** — the intent is well formed; hard fail
+2. **contract** — every instance carries every field the intent now requires
+3. **sources** — the collector declares where each field comes from
+4. **audit** — ranked gaps against the declared standard; advisory, since raising a standard is *supposed* to produce gaps
+5. **Claude** — only if 2 or 3 broke: installs `fleet-control` from this marketplace, updates `collector/sources.yml`, the adapters and the data file, opens a PR
+6. **render** — regenerates and commits the control room
+
+Conformance gaps are for humans to decide about; contract breaks are mechanical, and those are the only ones an agent is dispatched to fix.
 
 ```yaml
 jobs:
@@ -23,17 +41,15 @@ jobs:
       harness_repo: letrud/harness
       harness_ref: v1
     secrets:
-      anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}            # or, on a Pro/Max subscription,
-      claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }} # from `claude setup-token`
+      anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+      claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 ```
 
-Neither secret is required: without one the workflow validates, audits and renders, and reports the gap instead of dispatching Claude to close it.
+Locally the same scripts run through each fleet repo's Makefile (`make check audit room collect`), which expects this repo at `../harness` or `HARNESS=`.
 
-The workflow validates the intent, checks whether the fleet repo's data and collector still satisfy it, runs the audit, and — only when the contract actually broke — dispatches Claude Code to update that repo's local implementation and open a PR. It always regenerates the control room.
+## Product repos — `rebuild-from-intent.yml`
 
-## Using it from a product repo
-
-For a repository whose `intent/` is the specification and whose code is written from it. The caller knows nothing about the repository and is copied between repos verbatim:
+A product intent is a specification under `intent/` from which source code is written. Every change to it is a reason to reconcile the implementation, so the agent is dispatched on each change, with the diff. The caller knows nothing about the repository and is copied between repos verbatim:
 
 ```yaml
 on:
@@ -51,20 +67,28 @@ jobs:
     secrets: inherit
 ```
 
-On every change under `intent/` Claude is handed the diff and reads the intent's Markdown for everything else — language, layout, distribution, how the implementation proves itself — deciding and recording in the PR where the intent is silent. Two conventions are the harness's, not the repo's: `build.yml` proves the implementation on every push and PR, `release.yml` ships on a `v*` tag. Without a credential the workflow records the change and stops.
+Everything the agent needs — language, layout, distribution, how the implementation proves itself — it reads from the Markdown under `intent/`. Where the intent is silent it decides and records the decision in the PR, never in the intent. What the workflow adds on top:
 
-## Using it locally
+- **the change** — the `intent/` diff of the push, or "full reconcile" on dispatch
+- **resume** — a `rebuild/*` branch ahead of the default branch with no PR is checked out and continued, not redone; the agent commits and pushes as it goes so a cut-short session leaves its work behind
+- **conventions** — `build.yml` proves the implementation on every push and PR; `release.yml` ships on a `v*` tag. These are the harness's, not the repo's, because other systems read stage state from them
+- **transcript** — result, turns, cost and the agent's last words go in the job summary. On a private repo the full transcript is kept as an artifact for 30 days; on a public repo it is not, because it contains every file the agent read
+- **budget** — `--max-turns 500` and a 120-minute job by default; override with `claude_args`
 
-```bash
-git clone letrud/harness
-git clone letrud/software-factory
-cd software-factory && make check      # expects ../harness, or set HARNESS=
-```
+Optional inputs: `check` (a command whose outcome is shown to the agent), `instructions` (prefer stating things in the intent), `intent_dir`, `branch_prefix`, `autofix`.
 
-## Installing the plugin
+## Credentials
 
-In Claude Code or Cowork, add this repo as a marketplace and install `fleet-control`. The four skills — intent, scaffold, audit, surface — are then available for authoring and maintaining any fleet.
+Both workflows accept `anthropic_api_key` (Anthropic API, billed to API credit) and `claude_code_oauth_token` (a Pro/Max subscription, minted with `claude setup-token`). If both are set the API key is used. Neither is required.
+
+GitHub Actions can only read **Actions** secrets — repository, environment or organization scope. Codespaces secrets are not visible to workflows. Sharing one secret across repos needs an organization.
+
+The job token opens the pull requests, so each calling repository must allow Actions to create pull requests (Settings → Actions → General → Workflow permissions).
+
+## The plugin
+
+`plugins/fleet-control` is a Claude Code plugin with four skills — `fleet-intent`, `fleet-scaffold`, `fleet-audit`, `fleet-surface` — the intent schema, the renderer and three worked examples from different domains. CI installs it from this repo as a marketplace; a person installs it the same way, so authoring an intent and maintaining one use the same rules. See `plugins/fleet-control/README.md`.
 
 ## Releasing
 
-Fleet repos pin `@v1`. Tag a new major only for a change that alters what an existing intent means; see CLAUDE.md. `selftest.yml` must be green before tagging — it runs all three worked examples through scaffold, audit and render.
+Callers pin `@v1`, and `v1` moves forward with every additive change. Tag a new major only for a change that alters what an existing intent means or what a data file must contain — see CLAUDE.md for what counts. `selftest.yml` must be green before the tag moves: it runs every worked example through scaffold, audit and render, and parses both reusable workflows.
