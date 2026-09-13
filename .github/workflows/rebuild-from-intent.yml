@@ -331,13 +331,16 @@ jobs:
 
       # The implementation proves itself the way its own CI does, and that can need
       # secrets — a bank's test credentials, a registry token. The agent gets exactly
-      # the secrets the repository's own workflows reference (`secrets.NAME` under
-      # .github/workflows/), never the Claude credentials or the job token, and never
-      # anything the repo's CI does not itself use. Values are masked in the log.
+      # the secrets the repository names: by literal reference in its own workflows
+      # (`secrets.NAME` under .github/workflows/), or by a name convention its intent
+      # states (`PSD2_CRED_<BANK>_<ENV>_CERT` — placeholders in angle brackets match
+      # anything). Never the Claude credentials or the job token, and never anything
+      # the repository does not itself name. Values are masked in the log.
       - name: Give the agent the secrets its CI uses
         if: ${{ inputs.autofix && steps.cred.outputs.present == 'true' }}
         env:
           INHERITED: ${{ toJSON(secrets) }}
+          INTENT: ${{ inputs.intent_dir }}
         run: |
           python3 - <<'PY'
           import json, os, re, glob
@@ -346,16 +349,22 @@ jobs:
           referenced = set()
           for f in glob.glob(".github/workflows/*.yml") + glob.glob(".github/workflows/*.yaml"):
               referenced |= set(re.findall(r"secrets\.([A-Za-z_][A-Za-z0-9_]*)", open(f, encoding="utf-8").read()))
+          # conventions the intent states: UPPER_CASE names with <PLACEHOLDER> parts
+          patterns = set()
+          for f in glob.glob(os.path.join(os.environ["INTENT"], "**", "*.md"), recursive=True):
+              for tok in re.findall(r"(?<![A-Za-z0-9_])[A-Z][A-Z0-9_]*(?:<[A-Za-z_]+>[A-Z0-9_]*)+(?![A-Za-z0-9_])", open(f, encoding="utf-8").read()):
+                  patterns.add(re.compile("^" + re.sub(r"<[A-Za-z_]+>", "[A-Z0-9_]+", re.escape(tok)) + "$"))
           inherited = json.loads(os.environ["INHERITED"])
+          by_convention = {n for n in inherited if any(p.match(n) for p in patterns)}
           given = []
           with open(os.environ["GITHUB_ENV"], "a") as env:
-              for name in sorted(referenced - never):
+              for name in sorted((referenced | by_convention) - never):
                   value = inherited.get(name)
                   if not value: continue
                   print(f"::add-mask::{value}")
                   env.write(f"{name}<<__EOF_{name}__" + chr(10) + value + chr(10) + f"__EOF_{name}__" + chr(10))
                   given.append(name)
-          print("secrets referenced by this repository's CI and given to the agent:", ", ".join(given) or "none")
+          print("secrets named by this repository (its CI, or a convention in its intent) and given to the agent:", ", ".join(given) or "none")
           PY
 
       # Bash is unrestricted: the agent must run whatever toolchain the intent names,
